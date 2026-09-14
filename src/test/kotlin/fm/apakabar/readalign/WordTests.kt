@@ -16,6 +16,7 @@ class WordTests {
     @Serializable
     data class Cases(
         @SerialName("printed_parts") val printedParts: List<PartsCase>,
+        val letters: List<LettersCase>,
         val normalize: List<NormalizeCase>,
         val similarity: List<SimilarityCase>,
         @SerialName("english_syllables") val englishSyllables: List<SyllableCase>,
@@ -25,6 +26,12 @@ class WordTests {
     data class PartsCase(
         val word: String,
         val parts: Int,
+    )
+
+    @Serializable
+    data class LettersCase(
+        val word: String,
+        val want: List<String>,
     )
 
     @Serializable
@@ -62,6 +69,14 @@ class WordTests {
         cases.printedParts.map { case ->
             DynamicTest.dynamicTest("${case.word} is written in ${case.parts}") {
                 assertEquals(case.parts, printedParts(case.word))
+            }
+        }
+
+    @TestFactory
+    fun cutsAWordIntoLetters(): List<DynamicTest> =
+        cases.letters.map { case ->
+            DynamicTest.dynamicTest("${case.word} is written in ${case.want.size}") {
+                assertEquals(case.want, letters(case.word))
             }
         }
 

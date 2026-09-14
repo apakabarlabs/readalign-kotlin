@@ -118,8 +118,13 @@ internal class Alignment(
             val cell = score[row][column]
             val straight = straight(row - 1, column - 1)
             val span =
-                (PAIR..spansForExpectedAt(row - 1)).firstOrNull { span ->
-                    column >= span && cell == score[row - 1][column - span] + joinedHeard(row - 1, column - 1, span)
+                if (cell == score[row - 1][column - 1] + straight) {
+                    null
+                } else {
+                    (PAIR..spansForExpectedAt(row - 1)).firstOrNull { span ->
+                        column >= span &&
+                            cell == score[row - 1][column - span] + joinedHeard(row - 1, column - 1, span)
+                    }
                 }
             when {
                 cell == score[row - 1][column - 1] + straight -> {
@@ -136,7 +141,8 @@ internal class Alignment(
                     row -= 1
                     column -= span
                 }
-                row >= PAIR && column >= PAIR &&
+                row >= PAIR &&
+                    column >= PAIR &&
                     cell == score[row - PAIR][column - PAIR] + joinedPair(row - 1, column - 1) -> {
                     if (joinedPair(row - 1, column - 1) >= joinThreshold) {
                         matches.add(WordMatch(row - PAIR until row, column - PAIR until column))

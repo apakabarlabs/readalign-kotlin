@@ -25,15 +25,17 @@ class CorpusCopyTests {
                 .timeout(Duration.ofSeconds(TIMEOUT_SECONDS))
                 .build()
         val answer =
-            java.net.http.HttpClient
-                .newHttpClient()
-                .send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+            CLIENT.send(
+                request,
+                java.net.http.HttpResponse.BodyHandlers
+                    .ofString(),
+            )
         assertTrue(answer.statusCode() == OK, "$address answered ${answer.statusCode()}")
         return answer.body()
     }
 
     private fun copy(path: String): String =
-        requireNotNull(CorpusCopyTests::class.java.getResourceAsStream(path)) {
+        checkNotNull(CorpusCopyTests::class.java.getResourceAsStream(path)) {
             "$path is missing: run `make sync-yaml`"
         }.use { it.readBytes().decodeToString() }
 
@@ -52,6 +54,9 @@ class CorpusCopyTests {
     companion object {
         private const val OK = 200
         private const val TIMEOUT_SECONDS = 10L
+        private val CLIENT: java.net.http.HttpClient =
+            java.net.http.HttpClient
+                .newHttpClient()
 
         /**
          * Every file copied from the leading port, as a pair of where it lives there and

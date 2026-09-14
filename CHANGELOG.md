@@ -1,10 +1,10 @@
 # Changelog
 
-## 0.3.0
+## 0.4.0
 
 First release of this library in Kotlin. Nothing to migrate from.
 
-It answers the same question, and to the same cases, as the Swift and Python libraries: all three read one set of tuned numbers and one set of cases, so they cannot quietly come to disagree. The version starts at 0.3.0 rather than 0.1.0 because those numbers and cases are shared, and a shared change moves every library to the same version in the same release.
+It answers the same question, and to the same cases, as the Swift and Python libraries: all three read one set of tuned numbers and one set of cases, so they cannot quietly come to disagree. The version starts at 0.4.0 rather than 0.1.0 because those numbers and cases are shared, and a shared change moves every library to the same version in the same release.
 
 ### Added
 
@@ -23,4 +23,4 @@ The alignment tolerates what recognisers do to a text they were not given: a mis
 Two differences are the language's, not the library's.
 
 - Comparing two spellings brings them to one Unicode spelling first. Swift compares its strings by canonical equivalence and needs no such step; Kotlin compares them by code unit, so a port leaving it out would pass its own tests and disagree with its siblings on any word carrying a mark.
-- Words are counted in the letters a reader sees rather than in the units the JVM stores a string in, so `İstanbul` does not gain a syllable and `Ångström` does not lose its ring.
+- Words are counted in the letters a reader sees rather than in the units the JVM stores a string in, so `İstanbul` does not gain a syllable and `Ångström` does not lose its ring. Where those letters are cut apart is asked of ICU, which is why `com.ibm.icu:icu4j` is a dependency: `java.text.BreakIterator` cuts a zero-width joiner away from the word it joins, and the `\X` of `java.util.regex` breaks a Devanagari conjunct in two, so either would have this library read a Persian or Hindi word as something its siblings do not read it as.

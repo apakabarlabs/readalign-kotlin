@@ -15,7 +15,7 @@ object Corpus {
         serializer: KSerializer<T>,
     ): T {
         val text =
-            requireNotNull(Corpus::class.java.getResourceAsStream("/$path")) {
+            checkNotNull(Corpus::class.java.getResourceAsStream("/$path")) {
                 "$path is missing: run `make sync-yaml`"
             }.use { it.readBytes().decodeToString() }
         return Yaml.default.decodeFromString(serializer, text)
@@ -109,7 +109,7 @@ fun expectWellFormed(
 ) {
     assertTrue(spans.size == count, "$name: one span per word")
     for ((index, span) in spans.withIndex()) {
-        assertTrue(span.end >= span.start - Corpus.TOLERANCE, "$name: word $index ends before it starts")
+        assertTrue(span.end >= span.start, "$name: word $index ends before it starts")
     }
     for ((earlier, later) in spans.zipWithNext()) {
         assertTrue(later.start >= earlier.start - Corpus.TOLERANCE, "$name: spans go backwards")

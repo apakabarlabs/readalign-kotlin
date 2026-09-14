@@ -18,10 +18,11 @@ class EnglishSyllableWeighting : SpeechWeighting {
 
     fun syllableCount(word: String): Int {
         val lightest = Rules.shared.lightestWord.toInt()
-        val vowels = Rules.shared.englishVowels.map(Char::toString).toSet()
-        // By letters as a reader sees them: counted in pieces, the dotted capital I of
-        // Turkish reads as a plain "i" and the word gains a syllable it does not have.
-        val letters = letters(word.lowercase()).filter { Character.isAlphabetic(it.codePointAt(0)) }
+        val vowels =
+            Rules.shared.englishVowels
+                .map(Char::toString)
+                .toSet()
+        val letters = letters(word)
         if (letters.isEmpty()) return lightest
 
         var count = 0

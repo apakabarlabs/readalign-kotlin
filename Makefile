@@ -25,7 +25,7 @@ clean:
 	./gradlew clean
 
 install:
-	./gradlew wrapper --gradle-version=8.7
+	./gradlew --version
 
 # The numbers and the cases belong to the leading port and are copied here. Run this
 # when they change there; a test holds the copies against that repository's main, so a

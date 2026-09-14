@@ -1,20 +1,24 @@
 package fm.apakabar.readalign
 
-import java.text.BreakIterator
+import com.ibm.icu.lang.UCharacter
+import com.ibm.icu.lang.UCharacterCategory
+import com.ibm.icu.text.BreakIterator
+import com.ibm.icu.util.ULocale
 import java.text.Normalizer
 import kotlin.math.max
 import kotlin.math.min
 
 /**
- * The letters of a word as a reader sees them.
+ * The pieces of text a reader sees as one character each.
  *
- * A letter and the mark above it are one letter here, however the text spells them, and
- * counting the pieces instead would answer differently on whole writing systems: two
- * Devanagari words three edits apart out of six pass a bar that two out of three does not.
+ * Cut by ICU rather than by anything the JVM carries of its own. `java.text.BreakIterator`
+ * and the `\X` of `java.util.regex` each answer by an older definition than the one Unicode
+ * now gives, and by different older ones: the first cuts a zero-width joiner away from the
+ * word it joins, the second breaks a Devanagari conjunct in two.
  */
-fun letters(word: String): List<String> {
+internal fun clusters(word: String): List<String> {
     val found = mutableListOf<String>()
-    val iterator = BreakIterator.getCharacterInstance()
+    val iterator = BreakIterator.getCharacterInstance(ULocale.ROOT)
     iterator.setText(word)
     var start = iterator.first()
     var end = iterator.next()
@@ -26,29 +30,30 @@ fun letters(word: String): List<String> {
     return found
 }
 
-/**
- * What a recogniser drops or invents, taken off both sides before they are compared.
- *
- * A letter is anything Unicode calls alphabetic, which is wider than the letter
- * categories: a roman numeral is read aloud as a word and counts as one.
- */
-fun normalize(word: String): String {
-    val kept =
-        letters(word.lowercase())
-            .filter { it.isNotEmpty() && Character.isAlphabetic(it.codePointAt(0)) }
-            .joinToString("")
-    // Brought to one spelling, because the same word typed one way and pasted another is
-    // two different strings here. Swift compares its strings by canonical equivalence and
-    // needs no such line, which is exactly why a port that leaves it out passes its own
-    // tests and disagrees with its sibling on a word carrying a mark.
-    return Normalizer.normalize(kept, Normalizer.Form.NFC)
+/** A letter, or a number written as letters are: a roman numeral is read aloud as a word. */
+private fun isLetter(cluster: String): Boolean {
+    val first = cluster.codePointAt(0)
+    return UCharacter.isLetter(first) ||
+        UCharacter.getType(first) == UCharacterCategory.LETTER_NUMBER.toInt()
 }
+
+/**
+ * The letters of a word as a reader sees them, lowercased and brought to one spelling.
+ *
+ * A letter and the mark above it are one letter here, however the text spells them, and
+ * counting the pieces instead would answer differently on whole writing systems: two
+ * Devanagari words three edits apart out of six pass a bar that two out of three does not.
+ */
+internal fun letters(word: String): List<String> = clusters(Normalizer.normalize(word, Normalizer.Form.NFC).lowercase()).filter(::isLetter)
+
+/** What a recogniser drops or invents, taken off both sides before they are compared. */
+fun normalize(word: String): String = letters(word).joinToString("")
 
 /**
  * How many words print writes this word as, which is the ceiling on how many heard words
  * it may be spread over. Marks at the edges and doubled marks are not parts.
  */
-fun printedParts(word: String): Int = max(word.split("-").count { it.isNotEmpty() }, 1)
+internal fun printedParts(word: String): Int = max(word.split("-").count { it.isNotEmpty() }, 1)
 
 /**
  * The word with its marks taken off, so that likeness can be measured without them.
@@ -62,12 +67,12 @@ fun fold(word: String): String {
     val lifted = decomposed.filterNot { Rules.shared.lifts(it.code) }
     return Normalizer
         .normalize(lifted, Normalizer.Form.NFC)
-        .map { Rules.shared.foldedLetters[it.toString()]?.firstOrNull() ?: it }
+        .map { Rules.shared.foldedLetters[it.toString()] ?: it.toString() }
         .joinToString("")
 }
 
 /** One for the same word, zero for nothing in common. */
-fun similarity(
+internal fun similarity(
     left: String,
     right: String,
 ): Double {
@@ -75,27 +80,26 @@ fun similarity(
     val said = fold(right)
     if (written == said) return 1.0
     if (written.isEmpty() || said.isEmpty()) return 0.0
-    val writtenLetters = letters(written)
-    val saidLetters = letters(said)
+    val writtenLetters = clusters(written)
+    val saidLetters = clusters(said)
     val distance = editDistance(writtenLetters, saidLetters)
-    return 1.0 - distance.toDouble() / max(writtenLetters.size, saidLetters.size)
+    return 1 - distance.toDouble() / max(writtenLetters.size, saidLetters.size)
 }
 
-private fun editDistance(
+/** How many letters have to change to turn one word into the other. */
+internal fun editDistance(
     left: List<String>,
     right: List<String>,
 ): Int {
     var previous = IntArray(right.size + 1) { it }
-    var current = IntArray(right.size + 1)
     for (row in 1..left.size) {
+        val current = IntArray(right.size + 1)
         current[0] = row
         for (column in 1..right.size) {
             val substitution = previous[column - 1] + if (left[row - 1] == right[column - 1]) 0 else 1
-            current[column] = min(substitution, min(previous[column] + 1, current[column - 1] + 1))
+            current[column] = min(min(previous[column] + 1, current[column - 1] + 1), substitution)
         }
-        val swap = previous
         previous = current
-        current = swap
     }
     return previous[right.size]
 }

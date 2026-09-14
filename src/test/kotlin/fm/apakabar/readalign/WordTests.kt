@@ -1,6 +1,7 @@
 package fm.apakabar.readalign
 
 import com.charleskorn.kaml.Yaml
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -14,42 +15,43 @@ import kotlin.test.assertTrue
 class WordTests {
     @Serializable
     data class Cases(
-        @Suppress("ktlint:standard:property-naming")
-        val printed_parts: List<PartsCase>,
+        @SerialName("printed_parts") val printedParts: List<PartsCase>,
         val normalize: List<NormalizeCase>,
         val similarity: List<SimilarityCase>,
-        @Suppress("ktlint:standard:property-naming")
-        val english_syllables: List<SyllableCase>,
+        @SerialName("english_syllables") val englishSyllables: List<SyllableCase>,
     )
 
     @Serializable
-    data class PartsCase(val word: String, val parts: Int)
+    data class PartsCase(
+        val word: String,
+        val parts: Int,
+    )
 
     @Serializable
-    data class NormalizeCase(val word: String, val want: String)
+    data class NormalizeCase(
+        val word: String,
+        val want: String,
+    )
 
     @Serializable
     data class SimilarityCase(
         val left: String,
         val right: String,
         val equals: Double? = null,
-        @Suppress("ktlint:standard:property-naming")
-        val at_least: Double? = null,
-        @Suppress("ktlint:standard:property-naming")
-        val at_most: Double? = null,
+        @SerialName("at_least") val atLeast: Double? = null,
+        @SerialName("at_most") val atMost: Double? = null,
     )
 
     @Serializable
     data class SyllableCase(
         val word: String,
         val count: Int? = null,
-        @Suppress("ktlint:standard:property-naming")
-        val at_least: Int? = null,
+        @SerialName("at_least") val atLeast: Int? = null,
     )
 
     private val cases: Cases by lazy {
         val text =
-            requireNotNull(this::class.java.getResourceAsStream("/word_tests.yaml")) {
+            checkNotNull(this::class.java.getResourceAsStream("/word_tests.yaml")) {
                 "word_tests.yaml is missing: run `make sync-yaml`"
             }.use { it.readBytes().decodeToString() }
         Yaml.default.decodeFromString(Cases.serializer(), text)
@@ -57,7 +59,7 @@ class WordTests {
 
     @TestFactory
     fun printedParts(): List<DynamicTest> =
-        cases.printed_parts.map { case ->
+        cases.printedParts.map { case ->
             DynamicTest.dynamicTest("${case.word} is written in ${case.parts}") {
                 assertEquals(case.parts, printedParts(case.word))
             }
@@ -75,20 +77,20 @@ class WordTests {
     fun similarity(): List<DynamicTest> =
         cases.similarity.map { case ->
             DynamicTest.dynamicTest("${case.left} against ${case.right}") {
-                val likeness = similarity(normalize(case.left), normalize(case.right))
+                val likeness = similarity(case.left, case.right)
                 case.equals?.let { assertEquals(it, likeness, 1e-9) }
-                case.at_least?.let { assertTrue(likeness >= it, "$likeness is under $it") }
-                case.at_most?.let { assertTrue(likeness <= it, "$likeness is over $it") }
+                case.atLeast?.let { assertTrue(likeness >= it, "$likeness is under $it") }
+                case.atMost?.let { assertTrue(likeness <= it, "$likeness is over $it") }
             }
         }
 
     @TestFactory
     fun englishSyllables(): List<DynamicTest> =
-        cases.english_syllables.map { case ->
-            DynamicTest.dynamicTest("${case.word} is said in ${case.count ?: case.at_least}") {
+        cases.englishSyllables.map { case ->
+            DynamicTest.dynamicTest("${case.word} is said in ${case.count ?: case.atLeast}") {
                 val counted = EnglishSyllableWeighting().weight(case.word)
                 case.count?.let { assertEquals(it.toDouble(), counted, 1e-9) }
-                case.at_least?.let { assertTrue(counted >= it, "$counted is under $it") }
+                case.atLeast?.let { assertTrue(counted >= it, "$counted is under $it") }
             }
         }
 }

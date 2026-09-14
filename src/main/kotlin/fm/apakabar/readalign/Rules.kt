@@ -4,13 +4,7 @@ import com.charleskorn.kaml.Yaml
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * The numbers the alignment is tuned to, shared by every port of this library.
- *
- * What each is for is written beside it in `rules.yaml`, which is copied here from the
- * leading port rather than retyped: a number that differs between ports is two libraries
- * wearing one name.
- */
+/** The numbers the alignment is tuned to. What each is for is written beside it in `rules.yaml`. */
 @Serializable
 data class Rules(
     @SerialName("match_threshold") val matchThreshold: Double,
@@ -47,7 +41,7 @@ data class Rules(
 
         val shared: Rules by lazy {
             val text =
-                requireNotNull(Rules::class.java.getResourceAsStream("/rules.yaml")) {
+                checkNotNull(Rules::class.java.getResourceAsStream("/rules.yaml")) {
                     "rules.yaml is missing from the library"
                 }.use { it.readBytes().decodeToString() }
             Yaml.default.decodeFromString(serializer(), text)

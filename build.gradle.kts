@@ -9,10 +9,6 @@ plugins {
 group = "fm.apakabar"
 version = "0.5.0"
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     implementation("io.heapy.kotaml:kotaml:0.108.0")
 

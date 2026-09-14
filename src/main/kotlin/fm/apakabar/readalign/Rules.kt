@@ -20,6 +20,7 @@ data class Rules(
     @SerialName("lightest_word") val lightestWord: Double,
     @SerialName("lifted_marks_from") val liftedMarksFrom: String,
     @SerialName("lifted_marks_to") val liftedMarksTo: String,
+    @SerialName("letter_joiners") val letterJoiners: List<String>,
     @SerialName("folded_letters") val foldedLetters: Map<String, String>,
     @SerialName("frame_seconds") val frameSeconds: Double,
     @SerialName("room_quantile") val roomQuantile: Double,
@@ -29,6 +30,9 @@ data class Rules(
     @SerialName("speech_from_loudest_share") val speechFromLoudestShare: Double,
     @SerialName("quietest_speech") val quietestSpeech: Double,
 ) {
+    /** Whether this mark writes one consonant joined to the next, making them one letter. */
+    fun joins(code: Int): Boolean = code in joiners
+
     /** Whether this is one of the marks likeness is measured without. */
     fun lifts(code: Int): Boolean {
         val first = liftedMarksFrom.toInt(HEXADECIMAL)
@@ -36,8 +40,10 @@ data class Rules(
         return code in first..last
     }
 
+    private val joiners: Set<Int> by lazy { letterJoiners.map { it.toInt(HEXADECIMAL) }.toSet() }
+
     companion object {
-        private const val HEXADECIMAL = 16
+        internal const val HEXADECIMAL = 16
 
         val shared: Rules by lazy {
             val text =

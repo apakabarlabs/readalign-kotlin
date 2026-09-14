@@ -1,9 +1,5 @@
 package fm.apakabar.readalign
 
-import com.ibm.icu.lang.UCharacter
-import com.ibm.icu.lang.UCharacterCategory
-import com.ibm.icu.text.BreakIterator
-import com.ibm.icu.util.ULocale
 import java.text.Normalizer
 import kotlin.math.max
 import kotlin.math.min
@@ -11,30 +7,57 @@ import kotlin.math.min
 /**
  * The pieces of text a reader sees as one character each.
  *
- * Cut by ICU rather than by anything the JVM carries of its own. `java.text.BreakIterator`
- * and the `\X` of `java.util.regex` each answer by an older definition than the one Unicode
- * now gives, and by different older ones: the first cuts a zero-width joiner away from the
- * word it joins, the second breaks a Devanagari conjunct in two.
+ * Cut by the rules written below rather than by whatever the platform carries, because
+ * every platform carries a different answer and a different vintage of it: one cuts a
+ * zero-width joiner away from the word it joins, another breaks a joined pair of
+ * consonants in two. Sharing the rules is what keeps the ports reading one word.
  */
 internal fun clusters(word: String): List<String> {
     val found = mutableListOf<String>()
-    val iterator = BreakIterator.getCharacterInstance(ULocale.ROOT)
-    iterator.setText(word)
-    var start = iterator.first()
-    var end = iterator.next()
-    while (end != BreakIterator.DONE) {
-        found.add(word.substring(start, end))
-        start = end
-        end = iterator.next()
+    val letter = StringBuilder()
+    var index = 0
+    while (index < word.length) {
+        val code = word.codePointAt(index)
+        if (letter.isNotEmpty() && !joinsOn(code, letter)) {
+            found.add(letter.toString())
+            letter.setLength(0)
+        }
+        letter.appendCodePoint(code)
+        index += Character.charCount(code)
     }
+    if (letter.isNotEmpty()) found.add(letter.toString())
     return found
 }
+
+/** A mark written above, below or beside a letter, which belongs to that letter. */
+private fun isMark(code: Int): Boolean =
+    when (Character.getType(code)) {
+        Character.NON_SPACING_MARK.toInt(),
+        Character.ENCLOSING_MARK.toInt(),
+        Character.COMBINING_SPACING_MARK.toInt(),
+        -> true
+
+        else -> false
+    }
+
+/** Whether this belongs to the letter being read rather than starting the next one. */
+private fun joinsOn(
+    code: Int,
+    letter: StringBuilder,
+): Boolean {
+    if (isMark(code) || code == ZERO_WIDTH_NON_JOINER || code == ZERO_WIDTH_JOINER) return true
+    val last = letter.codePointBefore(letter.length)
+    return Rules.shared.joins(last) && Character.isLetter(code)
+}
+
+/** Written inside a word to keep two letters from joining up, or to make them. */
+private const val ZERO_WIDTH_NON_JOINER = 0x200C
+private const val ZERO_WIDTH_JOINER = 0x200D
 
 /** A letter, or a number written as letters are: a roman numeral is read aloud as a word. */
 private fun isLetter(cluster: String): Boolean {
     val first = cluster.codePointAt(0)
-    return UCharacter.isLetter(first) ||
-        UCharacter.getType(first) == UCharacterCategory.LETTER_NUMBER.toInt()
+    return Character.isLetter(first) || Character.getType(first) == Character.LETTER_NUMBER.toInt()
 }
 
 /**

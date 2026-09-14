@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0
+
+Nothing you call has to change, and the library stops being fourteen megabytes heavier than it needs to be.
+
+### Changed
+- Where a word is cut into letters is now decided by the rules this library shares rather than by any table the platform carries. The marks that join one consonant to the next are named in `rules.yaml`, and the letters of eleven writing systems are pinned letter by letter in the cases.
+
+### Removed
+- `com.ibm.icu:icu4j`. It was brought in because neither `java.text.BreakIterator` nor the `\X` of `java.util.regex` cuts a word the way the sibling ports do, and each is wrong in a different place. Writing the cut down and sharing it answers that without the fourteen megabytes, which on a phone were paid for a table the operating system already has.
+
 ## 0.4.0
 
 First release of this library in Kotlin. Nothing to migrate from.
@@ -23,4 +33,4 @@ The alignment tolerates what recognisers do to a text they were not given: a mis
 Two differences are the language's, not the library's.
 
 - Comparing two spellings brings them to one Unicode spelling first. Swift compares its strings by canonical equivalence and needs no such step; Kotlin compares them by code unit, so a port leaving it out would pass its own tests and disagree with its siblings on any word carrying a mark.
-- Words are counted in the letters a reader sees rather than in the units the JVM stores a string in, so `İstanbul` does not gain a syllable and `Ångström` does not lose its ring. Where those letters are cut apart is asked of ICU, which is why `com.ibm.icu:icu4j` is a dependency: `java.text.BreakIterator` cuts a zero-width joiner away from the word it joins, and the `\X` of `java.util.regex` breaks a Devanagari conjunct in two, so either would have this library read a Persian or Hindi word as something its siblings do not read it as.
+- Words are counted in the letters a reader sees rather than in the units the JVM stores a string in, so `İstanbul` does not gain a syllable and `Ångström` does not lose its ring. Where those letters are cut apart is decided by rules this library shares with its siblings rather than by anything the JVM carries: `java.text.BreakIterator` cuts a zero-width joiner away from the word it joins, and the `\X` of `java.util.regex` breaks a Devanagari conjunct in two, so either would have this library read a Persian or Hindi word as something its siblings do not read it as.

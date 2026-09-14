@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "fm.apakabar"
-version = "0.4.0"
+version = "0.5.0"
 
 repositories {
     mavenCentral()
@@ -15,7 +15,6 @@ repositories {
 
 dependencies {
     implementation("io.heapy.kotaml:kotaml:0.108.0")
-    implementation("com.ibm.icu:icu4j:78.1")
 
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.0")

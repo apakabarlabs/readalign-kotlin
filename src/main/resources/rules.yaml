@@ -1,0 +1,84 @@
+# The numbers the alignment is tuned to. Shared by every port of this library, so
+# that changing one changes all of them rather than leaving them quietly apart.
+#
+# What each is for is written up in the README of the Swift library, under
+# "How it works". This file is copied into every port, so that is where it stays.
+
+# How alike two words must be to count as the same word.
+match_threshold: 0.6
+
+# A join is held to at least this, however low the match bar is set: loosely,
+# joining swallows the neighbouring word whole.
+join_floor: 0.9
+
+# Passing a word over, on either side.
+gap_penalty: -0.5
+
+# A pairing below its bar. Only its being worse than two gaps matters.
+mismatch_penalty: -1.5
+
+# Shorter than this and a word has no stretch of the recording to be found at.
+room_enough: 0.04
+
+# How many heard words one written word may be spread over when print says
+# nothing: a compound gives its own count, anything else may still take a pair,
+# since a recogniser splits a long word wherever it likes.
+join_span: 2
+
+# Letters that open a syllable for the English weighting.
+english_vowels: "aeiouy"
+
+# The silent final "e" of English, which closes no syllable of its own -- except
+# after "l", or "little" comes out as one syllable. A word shorter than this
+# has no syllable to spare.
+silent_ending: "e"
+silent_ending_except_after: "le"
+shortest_with_a_silent_ending: 3
+
+# No word weighs less than this, whoever wrote the weighting, or a run of them
+# shares a pause by dividing by nothing.
+lightest_word: 1
+
+# Likeness is measured with the marks taken off, because a recogniser trained on
+# plain Latin returns "casa" for "čaša" and the word is still the word.
+#
+# Which marks come off is named here rather than left to whatever each language
+# calls a diacritic: those tables disagree, and a port would answer differently
+# from its sibling on whole writing systems. This range is the Latin combining
+# diacritics and nothing else. A voiced-sound mark on Japanese kana and a vowel
+# sign in Devanagari are combining marks too, and lifting them would turn one word
+# into a different one: さ is not ざ.
+lifted_marks_from: "0300"
+lifted_marks_to: "036F"
+
+# Letters that carry their mark through the letter itself, so there is nothing
+# above them to lift.
+folded_letters:
+  "ł": "l"
+  "đ": "d"
+  "ø": "o"
+  "ħ": "h"
+  "ŧ": "t"
+
+# Holding a word open through the silence after it, which needs the recording.
+# Short enough to find the edge of a consonant, long enough that one loud sample
+# cannot pass for speech.
+frame_seconds: 0.01
+
+# Louder than the room, quieter than a voice. Taken from the recording rather than
+# fixed, because one reader is recorded hotter than another: the quietest tenth of
+# the frames is the room, and speech is what stands well clear of it.
+room_quantile: 0.1
+speech_above_room: 4
+quietest_room: 0.0001
+
+# How far past its own mark a word may be held.
+hold_limit: 0.6
+
+# How loud this recording speaks, taken as the mean of its loudest share. Speech
+# occupies rather more than half of a reading, so half lands inside the voice
+# rather than on its peaks, and one reader recorded hotter than another is
+# measured against themselves. A recording with nothing in it still has to answer
+# something above zero, or everything measured against it is divided by nothing.
+speech_from_loudest_share: 0.5
+quietest_speech: 0.000001

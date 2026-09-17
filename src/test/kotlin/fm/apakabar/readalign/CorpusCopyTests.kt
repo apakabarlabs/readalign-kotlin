@@ -71,6 +71,7 @@ class CorpusCopyTests {
                 "Tests/ReadAlignTests/Resources/hold_tests.yaml" to "/hold_tests.yaml",
                 "Tests/ReadAlignTests/Resources/match_tests.yaml" to "/match_tests.yaml",
                 "Tests/ReadAlignTests/Resources/pair_tests.yaml" to "/pair_tests.yaml",
+                "Tests/ReadAlignTests/Resources/piece_tests.yaml" to "/piece_tests.yaml",
                 "Tests/ReadAlignTests/Resources/word_tests.yaml" to "/word_tests.yaml",
             )
     }

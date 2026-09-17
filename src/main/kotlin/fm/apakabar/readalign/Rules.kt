@@ -29,6 +29,10 @@ data class Rules(
     @SerialName("hold_limit") val holdLimit: Double,
     @SerialName("speech_from_loudest_share") val speechFromLoudestShare: Double,
     @SerialName("quietest_speech") val quietestSpeech: Double,
+    @SerialName("piece_seconds") val pieceSeconds: Double,
+    @SerialName("shortest_piece_share") val shortestPieceShare: Double,
+    @SerialName("pause_seconds") val pauseSeconds: Double,
+    @SerialName("same_moment") val sameMoment: Double,
 ) {
     /** Whether this mark writes one consonant joined to the next, making them one letter. */
     fun joins(code: Int): Boolean = code in joiners

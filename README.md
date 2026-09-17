@@ -1,4 +1,5 @@
 [![Tests](https://github.com/apakabarlabs/readalign-kotlin/actions/workflows/tests.yml/badge.svg)](https://github.com/apakabarlabs/readalign-kotlin/actions/workflows/tests.yml)
+[![Documentation](https://github.com/apakabarlabs/readalign-kotlin/actions/workflows/documentation.yml/badge.svg)](https://apakabarlabs.github.io/readalign-kotlin/)
 # readalign-kotlin
 
 Lines a speech recogniser's output up against the text that was read, and says when each word of that text was spoken.
@@ -150,6 +151,10 @@ dependencies {
 ```
 
 The API at 0.5.0 is not settled and may change without a major version.
+
+## Documentation
+
+The [Dokka API reference](https://apakabarlabs.github.io/readalign-kotlin/) is generated from the public Kotlin API and deployed by GitHub Actions.
 
 ## Develop
 

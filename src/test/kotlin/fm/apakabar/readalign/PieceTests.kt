@@ -94,8 +94,6 @@ class PieceTests {
                 assertEquals(0, pieces.first().first, "${cutCase.name}: does not start at the beginning")
                 assertEquals(samples.size, pieces.last().last + 1, "${cutCase.name}: ends short")
                 for ((earlier, later) in pieces.zipWithNext()) {
-                    // Overlap where a pause allows it, but never a gap: a sample no piece
-                    // holds is a word no recogniser is ever asked about.
                     assertTrue(later.first <= earlier.last + 1, "${cutCase.name}: a gap between pieces")
                     assertTrue(later.first > earlier.first, "${cutCase.name}: a piece that goes nowhere")
                 }
@@ -122,16 +120,15 @@ class PieceTests {
             }
         }
 
-    /** A recogniser that says one word once the piece it is given is short enough. */
     private fun silentUntilTrimmedBy(
         seconds: Double,
         ofLength: Int,
         asked: MutableList<Int>,
     ): (FloatArray) -> List<RecognizedWord> {
-        val speaks = ofLength - (seconds * SAMPLE_RATE).toInt()
+        val speaksAtOrBelow = ofLength - (seconds * SAMPLE_RATE).toInt()
         return { piece ->
             asked.add(piece.size)
-            if (piece.size <= speaks) ONE_WORD else emptyList()
+            if (piece.size <= speaksAtOrBelow) ONE_WORD else emptyList()
         }
     }
 
@@ -160,7 +157,6 @@ class PieceTests {
         val words = Pieces.heard(piece, SAMPLE_RATE, silentUntilTrimmedBy(0.3, piece.size, asked))
 
         assertEquals(ONE_WORD, words)
-        // The whole piece, then one trim at a time until the third of them answers.
         assertEquals(listOf(piece.size, piece.size - 1600, piece.size - 3200, piece.size - 4800), asked)
     }
 

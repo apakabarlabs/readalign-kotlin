@@ -23,9 +23,6 @@ object Pieces {
         val frames = SilenceHold.energyFrames(samples, sampleRate)
         if (frames.isEmpty()) return emptyList()
         val threshold = SilenceHold.speechThreshold(frames)
-        // Quiet is only quiet between speech. Where nothing stands above the threshold
-        // there is no voice to pause, and the whole recording would otherwise read as one
-        // long pause and offer its own middle as a place to cut.
         if (frames.none { it >= threshold }) return emptyList()
 
         val eachFrame = Rules.shared.frameSeconds
@@ -75,9 +72,6 @@ object Pieces {
         while (samples.size - start > longest) {
             val cut = marks.lastOrNull { it > start + shortest && it < start + longest } ?: (start + longest)
             pieces.add(start until cut)
-            // One pause back, but never back past half a piece: the overlap is there to
-            // carry the words at the seam, and a pause near the start of this piece would
-            // hand the next one almost the same range, over and over.
             start = marks.lastOrNull { it < cut && it >= start + shortest } ?: cut
         }
         pieces.add(start until samples.size)
@@ -130,31 +124,11 @@ object Pieces {
         return reading
     }
 
-    /** Where the two pieces stop saying the same thing: what comes off each side of a seam. */
     private data class Seam(
-        /** Words to take off the end of the reading so far. */
         val keptAfterIt: Int,
-        /** Words to take off the front of the coming piece. */
         val comingUpToIt: Int,
     )
 
-    /**
-     * The longest run the two pieces say alike in the ground they both cover.
-     *
-     * Only words inside that ground can be a second copy, so the search is held to it: a
-     * word the reading genuinely says twice, further along, is out of reach and stays.
-     *
-     * The run is looked for anywhere inside the overlap rather than at its edges, because a
-     * recogniser drops or invents a word at the edge of what it was given — one piece ended
-     * "...by time decease we" where the other heard no "we" — and a run pinned to the edges
-     * would find nothing and leave the whole overlap said twice. A run of one word is taken
-     * only when it is the whole of what the coming piece says in the overlap, or a word as
-     * common as "the" would pair with itself by chance.
-     *
-     * Past the run the coming piece is believed and the piece before it is not: they cover
-     * the same seconds there, and the one that goes on past them heard them with what
-     * follows while the other was hearing the last of what it was given.
-     */
     private fun agreement(
         kept: List<RecognizedWord>,
         coming: List<RecognizedWord>,

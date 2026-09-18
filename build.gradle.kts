@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "fm.apakabar"
-version = "0.12.1"
+version = "0.12.2"
 
 dependencies {
     implementation("io.heapy.kotaml:kotaml:0.110.0")

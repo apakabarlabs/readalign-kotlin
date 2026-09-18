@@ -8,14 +8,6 @@ data class WordMatch(
     val heard: IntRange,
 )
 
-/**
- * The table that decides which written word came back as which heard word.
- *
- * Both sides are walked at once, and a step may take one word from each, join two heard
- * words into one written word, split one heard word across two written ones, or pass a
- * word over. A gap costs less than a bad pairing, so a false start is stepped over rather
- * than pushed into a neighbour.
- */
 internal class Alignment(
     private val expected: List<String>,
     private val heard: List<String>,

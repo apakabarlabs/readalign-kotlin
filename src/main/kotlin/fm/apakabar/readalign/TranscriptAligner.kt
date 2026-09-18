@@ -140,10 +140,6 @@ object TranscriptAligner {
         return timings.filterNotNull()
     }
 
-    /**
-     * Which neighbour swallowed a run of words nobody heard: the one that is reading
-     * slower per syllable, since it is the one holding their time.
-     */
     private fun swallower(
         run: IntRange,
         timings: Array<WordSpan?>,

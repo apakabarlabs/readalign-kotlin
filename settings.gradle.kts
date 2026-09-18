@@ -10,8 +10,6 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    // Declared here and not in the build file, so that a build including this project as
-    // a module of its own settles where dependencies come from without being argued with.
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         mavenCentral()

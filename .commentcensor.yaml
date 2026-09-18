@@ -1,0 +1,4 @@
+documentation: https://apakabarlabs.github.io/readalign-kotlin/scripts/pages.json
+
+skip:
+  - build/

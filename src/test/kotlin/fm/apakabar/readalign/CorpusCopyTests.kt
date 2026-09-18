@@ -58,11 +58,6 @@ class CorpusCopyTests {
             java.net.http.HttpClient
                 .newHttpClient()
 
-        /**
-         * Every file copied from the leading port, as a pair of where it lives there and
-         * where it lives here. A new shared file is checked from the moment it is added
-         * to this list, rather than when somebody remembers to write a test for it.
-         */
         private val SHARED =
             listOf(
                 "Sources/ReadAlign/Resources/rules.yaml" to "/rules.yaml",

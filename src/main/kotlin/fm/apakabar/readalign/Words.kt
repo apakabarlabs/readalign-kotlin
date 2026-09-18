@@ -4,14 +4,6 @@ import java.text.Normalizer
 import kotlin.math.max
 import kotlin.math.min
 
-/**
- * The pieces of text a reader sees as one character each.
- *
- * Cut by the rules written below rather than by whatever the platform carries, because
- * every platform carries a different answer and a different vintage of it: one cuts a
- * zero-width joiner away from the word it joins, another breaks a joined pair of
- * consonants in two. Sharing the rules is what keeps the ports reading one word.
- */
 internal fun clusters(word: String): List<String> {
     val found = mutableListOf<String>()
     val letter = StringBuilder()
@@ -29,7 +21,6 @@ internal fun clusters(word: String): List<String> {
     return found
 }
 
-/** A mark written above, below or beside a letter, which belongs to that letter. */
 private fun isMark(code: Int): Boolean =
     when (Character.getType(code)) {
         Character.NON_SPACING_MARK.toInt(),
@@ -40,7 +31,6 @@ private fun isMark(code: Int): Boolean =
         else -> false
     }
 
-/** Whether this belongs to the letter being read rather than starting the next one. */
 private fun joinsOn(
     code: Int,
     letter: StringBuilder,
@@ -50,38 +40,23 @@ private fun joinsOn(
     return Rules.shared.joins(last) && Character.isLetter(code)
 }
 
-/** Written inside a word to keep two letters from joining up, or to make them. */
 private const val ZERO_WIDTH_NON_JOINER = 0x200C
 private const val ZERO_WIDTH_JOINER = 0x200D
 
-/** A letter, or a number written as letters are: a roman numeral is read aloud as a word. */
 private fun isLetter(cluster: String): Boolean {
     val first = cluster.codePointAt(0)
     return Character.isLetter(first) || Character.getType(first) == Character.LETTER_NUMBER.toInt()
 }
 
-/**
- * The letters of a word as a reader sees them, lowercased and brought to one spelling.
- *
- * A letter and the mark above it are one letter here, however the text spells them, and
- * counting the pieces instead would answer differently on whole writing systems: two
- * Devanagari words three edits apart out of six pass a bar that two out of three does not.
- */
 internal fun letters(word: String): List<String> = clusters(Normalizer.normalize(word, Normalizer.Form.NFC).lowercase()).filter(::isLetter)
 
 /** What a recogniser drops or invents, taken off both sides before they are compared. */
 fun normalize(word: String): String = letters(word).joinToString("")
 
-/**
- * How many words print writes this word as, which is the ceiling on how many heard words
- * it may be spread over. Marks at the edges and doubled marks are not parts.
- */
 internal fun printedParts(word: String): Int = max(word.split("-").count { it.isNotEmpty() }, 1)
 
-/** A token carrying one of these opens a word; they are part of no word. */
 private val OPENS_A_WORD = setOf('▁', '|', ' ', '\t', '\n')
 
-/** What the recogniser could not spell at all, which belongs in no word. */
 private const val UNHEARD = "<unk>"
 
 /**
@@ -143,7 +118,6 @@ fun fold(word: String): String {
         .joinToString("")
 }
 
-/** One for the same word, zero for nothing in common. */
 internal fun similarity(
     left: String,
     right: String,
@@ -158,7 +132,6 @@ internal fun similarity(
     return 1 - distance.toDouble() / max(writtenLetters.size, saidLetters.size)
 }
 
-/** How many letters have to change to turn one word into the other. */
 internal fun editDistance(
     left: List<String>,
     right: List<String>,

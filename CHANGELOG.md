@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.2
+
+No runtime behaviour changes.
+
+### Changed
+- The documented JitPack coordinate now names the current release.
+- CI runs the complete Makefile build, including generated documentation and comment policy checks.
+- Releases are created by a manually dispatched GitHub Actions workflow after the full build passes.
+
 ## 0.12.1
 
 ### Fixed

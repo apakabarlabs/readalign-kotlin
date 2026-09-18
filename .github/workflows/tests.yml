@@ -22,11 +22,8 @@ jobs:
     - name: Set up Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    - name: Lint
-      run: make lint
+    - name: Install tools
+      run: make install-tools
 
-    - name: Compile
-      run: make test-build
-
-    - name: Run tests
-      run: make test
+    - name: Build
+      run: make build

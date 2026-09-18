@@ -1,11 +1,20 @@
 SWIFT_DIR = ../readalign-swift
 RESOURCES = src/main/resources
 TEST_RESOURCES = src/test/resources
+COMMENTCENSOR_VERSION ?= v0.3.2
+COMMENTCENSOR_ENV = build/commentcensor
+COMMENTCENSOR = $(COMMENTCENSOR_ENV)/bin/commentcensor
 
-.PHONY: build test test-build docs lint lint-fix format clean install sync-yaml
+.DEFAULT_GOAL := build
 
-build:
-	./gradlew build
+.PHONY: build test test-build docs comments lint lint-fix format clean install install-tools sync-yaml
+
+install-tools:
+	python3 -m venv $(COMMENTCENSOR_ENV)
+	$(COMMENTCENSOR_ENV)/bin/pip install --quiet --upgrade git+https://github.com/botforge-pro/commentcensor.git@$(COMMENTCENSOR_VERSION)
+
+comments:
+	$(COMMENTCENSOR) .
 
 test:
 	./gradlew test
@@ -16,7 +25,7 @@ test-build:
 docs:
 	./gradlew dokkaGeneratePublicationHtml
 
-lint:
+lint: comments
 	./gradlew ktlintCheck
 
 lint-fix:
@@ -28,7 +37,11 @@ clean:
 	./gradlew clean
 
 install:
+	$(MAKE) install-tools
 	./gradlew --version
+
+build: lint test-build test docs
+	./gradlew build
 
 # The numbers and the cases belong to the leading port and are copied here. Run this
 # when they change there; a test holds the copies against that repository's main, so a

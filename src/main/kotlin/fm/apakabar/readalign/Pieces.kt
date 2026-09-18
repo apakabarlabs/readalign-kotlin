@@ -55,10 +55,11 @@ object Pieces {
      * enough for the runtime to take whole; where no pause falls there, it ends on length
      * alone, because a piece that grows to find a pause is the very window this avoids.
      * The next piece begins one pause earlier than the last ended, so every word is heard
-     * whole by at least one of them, and never less than `least_overlap` earlier: where no
-     * pause offers itself the two pieces would otherwise meet edge to edge and share
-     * nothing, and a word invented at the edge of one would have nothing to be caught
-     * against.
+     * whole by at least one of them. Where no pause offers itself the two meet edge to edge
+     * and share nothing, which costs a word at that seam on a runtime that pads its input; a
+     * floor on the overlap was measured against that and cost more than it saved, because
+     * moving a piece changes the length of what the model is asked and this model answers a
+     * different length with different words.
      */
     fun cuts(
         samples: FloatArray,
@@ -67,7 +68,6 @@ object Pieces {
         val longest = (Rules.shared.pieceSeconds * sampleRate).toInt()
         if (samples.size <= longest || longest <= 0) return listOf(0 until samples.size)
         val shortest = (Rules.shared.pieceSeconds * Rules.shared.shortestPieceShare * sampleRate).toInt()
-        val least = (Rules.shared.leastOverlap * sampleRate).toInt()
         val marks = pauses(samples, sampleRate)
 
         val pieces = mutableListOf<IntRange>()
@@ -78,8 +78,7 @@ object Pieces {
             // One pause back, but never back past half a piece: the overlap is there to
             // carry the words at the seam, and a pause near the start of this piece would
             // hand the next one almost the same range, over and over.
-            val atAPause = marks.lastOrNull { it < cut && it >= start + shortest } ?: cut
-            start = minOf(atAPause, maxOf(start + shortest, cut - least))
+            start = marks.lastOrNull { it < cut && it >= start + shortest } ?: cut
         }
         pieces.add(start until samples.size)
         return pieces

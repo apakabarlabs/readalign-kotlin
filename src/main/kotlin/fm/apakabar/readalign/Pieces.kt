@@ -79,4 +79,51 @@ object Pieces {
         pieces.add(start until samples.size)
         return pieces
     }
+
+    /**
+     * One reading out of what each piece came back with.
+     *
+     * The pieces overlap, so the words at a seam arrive twice, and the second copy is
+     * dropped by time and text together: the same word marked within `same_moment` of one
+     * already kept is one word. Placed where it falls in the whole recording, so a caller
+     * hands over what it was given piece by piece and gets the reading back.
+     *
+     * A piece the recogniser had nothing to say about is an answer, not a failure: a
+     * stretch of silence is transcribed as no words at all. A count of transcripts that
+     * does not match the count of pieces is a failure, and is refused rather than quietly
+     * paired off until the shorter of the two runs out.
+     */
+    fun joined(
+        heard: List<List<RecognizedWord>>,
+        pieces: List<IntRange>,
+        sampleRate: Double,
+    ): List<RecognizedWord> {
+        if (heard.size != pieces.size) throw UnevenPiecesException(heard.size, pieces.size)
+        val reading = mutableListOf<RecognizedWord>()
+        for ((words, piece) in heard.zip(pieces)) {
+            val offset = piece.first / sampleRate
+            for (word in words) {
+                val placed =
+                    RecognizedWord(
+                        text = word.text,
+                        start = word.start + offset,
+                        end = word.end + offset,
+                    )
+                if (reading.none { sameWord(it, placed) }) reading.add(placed)
+            }
+        }
+        return reading
+    }
+
+    private fun sameWord(
+        kept: RecognizedWord,
+        word: RecognizedWord,
+    ): Boolean =
+        kotlin.math.abs(kept.start - word.start) < Rules.shared.sameMoment &&
+            normalize(kept.text) == normalize(word.text)
 }
+
+class UnevenPiecesException(
+    heard: Int,
+    pieces: Int,
+) : IllegalArgumentException("$heard transcripts for $pieces pieces")

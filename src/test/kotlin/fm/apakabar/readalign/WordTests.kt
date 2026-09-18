@@ -20,6 +20,23 @@ class WordTests {
         val normalize: List<NormalizeCase>,
         val similarity: List<SimilarityCase>,
         @SerialName("english_syllables") val englishSyllables: List<SyllableCase>,
+        val spoken: List<SpokenCase>,
+    )
+
+    @Serializable
+    data class TimedWord(
+        val text: String,
+        val start: Double,
+        val end: Double,
+    ) {
+        val recognized: RecognizedWord get() = RecognizedWord(text, start, end)
+    }
+
+    @Serializable
+    data class SpokenCase(
+        val name: String,
+        val tokens: List<TimedWord>,
+        val equals: List<TimedWord>,
     )
 
     @Serializable
@@ -106,6 +123,16 @@ class WordTests {
                 val counted = EnglishSyllableWeighting().weight(case.word)
                 case.count?.let { assertEquals(it.toDouble(), counted, 1e-9) }
                 case.atLeast?.let { assertTrue(counted >= it, "$counted is under $it") }
+            }
+        }
+
+    @TestFactory
+    fun gathersTokensIntoTheWordsTheCorpusNames(): List<DynamicTest> =
+        cases.spoken.map { case ->
+            DynamicTest.dynamicTest(case.name) {
+                val said = spoken(case.tokens.map { it.recognized })
+
+                assertEquals(case.equals.map { it.recognized }, said, case.name)
             }
         }
 }

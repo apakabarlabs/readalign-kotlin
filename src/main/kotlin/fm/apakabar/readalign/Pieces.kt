@@ -85,9 +85,9 @@ object Pieces {
      *
      * The pieces overlap, so the words at a seam arrive twice, and the second copy is
      * dropped by the text: the longest run the two pieces say alike inside the overlap is
-     * found, and everything the coming piece says up to the end of it comes off. Placed
-     * where it falls in the whole recording, so a caller hands over what it was given piece
-     * by piece and gets the reading back.
+     * found, everything the coming piece says up to the end of it comes off, and so does
+     * whatever the piece before said past it. Placed where it falls in the whole recording,
+     * so a caller hands over what it was given piece by piece and gets the reading back.
      *
      * By the text and not by the clock, because the clock is the one thing two builds of one
      * model do not share: the same word decoded in two pieces comes back a fifth of a second
@@ -118,38 +118,53 @@ object Pieces {
                         end = word.end + offset,
                     )
                 }
-            reading.addAll(placed.drop(saidAlready(reading, placed, offset, coveredTo)))
+            val seam = agreement(reading, placed, offset, coveredTo)
+            repeat(seam.keptAfterIt) { reading.removeAt(reading.size - 1) }
+            reading.addAll(placed.drop(seam.comingUpToIt))
             coveredTo = (piece.last + 1) / sampleRate
         }
         return reading
     }
 
+    /** Where the two pieces stop saying the same thing: what comes off each side of a seam. */
+    private data class Seam(
+        /** Words to take off the end of the reading so far. */
+        val keptAfterIt: Int,
+        /** Words to take off the front of the coming piece. */
+        val comingUpToIt: Int,
+    )
+
     /**
-     * How many of the coming piece's first words the piece before it has already said.
+     * The longest run the two pieces say alike in the ground they both cover.
      *
-     * Only the words that fall in the ground both pieces cover can be a second copy, so the
-     * search stops where the piece before ended: a word the reading genuinely says twice,
-     * further along, is out of reach of this and stays.
+     * Only words inside that ground can be a second copy, so the search is held to it: a
+     * word the reading genuinely says twice, further along, is out of reach and stays.
      *
-     * The run is the longest the two say alike, found anywhere inside the overlap rather
-     * than at its edges: a recogniser drops or invents a word at the edge of what it was
-     * given — one piece ended "...by time decease we" where the other heard no "we" — and a
-     * run pinned to the edges would find nothing and leave the whole overlap said twice. A
-     * run of one word is taken only when it is the whole of what the coming piece says in
-     * the overlap, or a word as common as "the" would pair with itself by chance.
+     * The run is looked for anywhere inside the overlap rather than at its edges, because a
+     * recogniser drops or invents a word at the edge of what it was given — one piece ended
+     * "...by time decease we" where the other heard no "we" — and a run pinned to the edges
+     * would find nothing and leave the whole overlap said twice. A run of one word is taken
+     * only when it is the whole of what the coming piece says in the overlap, or a word as
+     * common as "the" would pair with itself by chance.
+     *
+     * Past the run the coming piece is believed and the piece before it is not: they cover
+     * the same seconds there, and the one that goes on past them heard them with what
+     * follows while the other was hearing the last of what it was given.
      */
-    private fun saidAlready(
+    private fun agreement(
         kept: List<RecognizedWord>,
         coming: List<RecognizedWord>,
         overlapFrom: Double,
         coveredTo: Double,
-    ): Int {
+    ): Seam {
+        val nothing = Seam(0, 0)
         val tail = kept.dropWhile { it.start < overlapFrom }.map { normalize(it.text) }
         val head = coming.takeWhile { it.start < coveredTo }.map { normalize(it.text) }
-        if (tail.isEmpty() || head.isEmpty()) return 0
+        if (tail.isEmpty() || head.isEmpty()) return nothing
 
         var longest = 0
-        var endsAt = 0
+        var endsInTail = 0
+        var endsInHead = 0
         for (first in tail.indices) {
             for (second in head.indices) {
                 var run = 0
@@ -161,11 +176,12 @@ object Pieces {
                 }
                 if (run > longest) {
                     longest = run
-                    endsAt = second + run
+                    endsInTail = first + run
+                    endsInHead = second + run
                 }
             }
         }
-        return if (longest > 1 || longest == head.size) endsAt else 0
+        return if (longest > 1 || longest == head.size) Seam(tail.size - endsInTail, endsInHead) else nothing
     }
 
     /**

@@ -4,6 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -120,4 +121,71 @@ class PieceTests {
                 }
             }
         }
+
+    /** A recogniser that says one word once the piece it is given is short enough. */
+    private fun silentUntilTrimmedBy(
+        seconds: Double,
+        ofLength: Int,
+        asked: MutableList<Int>,
+    ): (FloatArray) -> List<RecognizedWord> {
+        val speaks = ofLength - (seconds * SAMPLE_RATE).toInt()
+        return { piece ->
+            asked.add(piece.size)
+            if (piece.size <= speaks) ONE_WORD else emptyList()
+        }
+    }
+
+    private fun saysNothing(asked: MutableList<Int>): (FloatArray) -> List<RecognizedWord> =
+        { piece ->
+            asked.add(piece.size)
+            emptyList()
+        }
+
+    @Test
+    fun asksOnceWhenTheFirstAnswerHasWordsInIt() {
+        val piece = FloatArray(10 * SAMPLE_RATE.toInt()) { 0.1f }
+        val asked = mutableListOf<Int>()
+
+        val words = Pieces.heard(piece, SAMPLE_RATE, silentUntilTrimmedBy(0.0, piece.size, asked))
+
+        assertEquals(ONE_WORD, words)
+        assertEquals(listOf(piece.size), asked)
+    }
+
+    @Test
+    fun asksAgainWithLessOfTheTailUntilSomethingComesBack() {
+        val piece = FloatArray(10 * SAMPLE_RATE.toInt()) { 0.1f }
+        val asked = mutableListOf<Int>()
+
+        val words = Pieces.heard(piece, SAMPLE_RATE, silentUntilTrimmedBy(0.3, piece.size, asked))
+
+        assertEquals(ONE_WORD, words)
+        // The whole piece, then one trim at a time until the third of them answers.
+        assertEquals(listOf(piece.size, piece.size - 1600, piece.size - 3200, piece.size - 4800), asked)
+    }
+
+    @Test
+    fun leavesAPieceTooShortToExpectWordsFromAskedOnlyOnce() {
+        val asked = mutableListOf<Int>()
+
+        val words = Pieces.heard(FloatArray(SAMPLE_RATE.toInt()) { 0.1f }, SAMPLE_RATE, saysNothing(asked))
+
+        assertTrue(words.isEmpty())
+        assertEquals(1, asked.size)
+    }
+
+    @Test
+    fun answersNothingWhenNoTrimBringsWordsBack() {
+        val asked = mutableListOf<Int>()
+
+        val words = Pieces.heard(FloatArray(10 * SAMPLE_RATE.toInt()) { 0.1f }, SAMPLE_RATE, saysNothing(asked))
+
+        assertTrue(words.isEmpty())
+        assertEquals(1 + Rules.shared.askAgainTrims.size, asked.size)
+    }
+
+    private companion object {
+        const val SAMPLE_RATE = 16000.0
+        val ONE_WORD = listOf(RecognizedWord("heard", 0.0, 1.0))
+    }
 }

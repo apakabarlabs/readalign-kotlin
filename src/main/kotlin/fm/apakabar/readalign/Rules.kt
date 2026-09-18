@@ -33,6 +33,8 @@ data class Rules(
     @SerialName("shortest_piece_share") val shortestPieceShare: Double,
     @SerialName("pause_seconds") val pauseSeconds: Double,
     @SerialName("same_moment") val sameMoment: Double,
+    @SerialName("ask_again_trims") val askAgainTrims: List<Double>,
+    @SerialName("shortest_worth_asking_again") val shortestWorthAskingAgain: Double,
 ) {
     /** Whether this mark writes one consonant joined to the next, making them one letter. */
     fun joins(code: Int): Boolean = code in joiners

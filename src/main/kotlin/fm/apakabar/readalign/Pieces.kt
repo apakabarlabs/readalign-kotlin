@@ -115,6 +115,37 @@ object Pieces {
         return reading
     }
 
+    /**
+     * What one piece comes back as, asking again with less of its tail while nothing comes.
+     *
+     * Parakeet answers some pieces of ordinary speech with no words at all, and whether it
+     * does turns on where the piece starts and how long it is together: the mel statistics
+     * are taken over the piece, so its length moves them, and past some edge the decoder
+     * predicts blank at every frame. Handing over a little less of the tail moves the piece
+     * off that edge. Nothing here tells speech from silence, so a piece that is genuinely
+     * silent pays for the whole list before answering nothing, which is why a piece shorter
+     * than `shortest_worth_asking_again` is not asked again at all.
+     *
+     * An answer won this way is missing whatever was said in the tail that was cut off. Each
+     * piece the recording is cut into overlaps the next, and that overlap is what covers it.
+     */
+    fun heard(
+        piece: FloatArray,
+        sampleRate: Double,
+        asking: (FloatArray) -> List<RecognizedWord>,
+    ): List<RecognizedWord> {
+        val words = asking(piece)
+        if (words.isNotEmpty() || piece.size / sampleRate < Rules.shared.shortestWorthAskingAgain) return words
+
+        for (trim in Rules.shared.askAgainTrims) {
+            val shorter = piece.size - (trim * sampleRate).toInt()
+            if (shorter <= 0) break
+            val again = asking(piece.copyOfRange(0, shorter))
+            if (again.isNotEmpty()) return again
+        }
+        return words
+    }
+
     private fun sameWord(
         kept: RecognizedWord,
         word: RecognizedWord,

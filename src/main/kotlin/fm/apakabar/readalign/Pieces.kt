@@ -84,9 +84,10 @@ object Pieces {
      * One reading out of what each piece came back with.
      *
      * The pieces overlap, so the words at a seam arrive twice, and the second copy is
-     * dropped by the text: the longest run of words the piece before already said is taken
-     * off the front of the one coming. Placed where it falls in the whole recording, so a
-     * caller hands over what it was given piece by piece and gets the reading back.
+     * dropped by the text: the longest run the two pieces say alike inside the overlap is
+     * found, and everything the coming piece says up to the end of it comes off. Placed
+     * where it falls in the whole recording, so a caller hands over what it was given piece
+     * by piece and gets the reading back.
      *
      * By the text and not by the clock, because the clock is the one thing two builds of one
      * model do not share: the same word decoded in two pieces comes back a fifth of a second
@@ -117,7 +118,7 @@ object Pieces {
                         end = word.end + offset,
                     )
                 }
-            reading.addAll(placed.drop(saidAlready(reading, placed, coveredTo)))
+            reading.addAll(placed.drop(saidAlready(reading, placed, offset, coveredTo)))
             coveredTo = (piece.last + 1) / sampleRate
         }
         return reading
@@ -129,22 +130,42 @@ object Pieces {
      * Only the words that fall in the ground both pieces cover can be a second copy, so the
      * search stops where the piece before ended: a word the reading genuinely says twice,
      * further along, is out of reach of this and stays.
+     *
+     * The run is the longest the two say alike, found anywhere inside the overlap rather
+     * than at its edges: a recogniser drops or invents a word at the edge of what it was
+     * given — one piece ended "...by time decease we" where the other heard no "we" — and a
+     * run pinned to the edges would find nothing and leave the whole overlap said twice. A
+     * run of one word is taken only when it is the whole of what the coming piece says in
+     * the overlap, or a word as common as "the" would pair with itself by chance.
      */
     private fun saidAlready(
         kept: List<RecognizedWord>,
         coming: List<RecognizedWord>,
+        overlapFrom: Double,
         coveredTo: Double,
     ): Int {
-        val reach = minOf(coming.takeWhile { it.start < coveredTo }.size, kept.size)
-        var said = 0
-        for (length in 1..reach) {
-            val alike =
-                kept.takeLast(length).zip(coming.take(length)).all { (earlier, later) ->
-                    normalize(earlier.text) == normalize(later.text)
+        val tail = kept.dropWhile { it.start < overlapFrom }.map { normalize(it.text) }
+        val head = coming.takeWhile { it.start < coveredTo }.map { normalize(it.text) }
+        if (tail.isEmpty() || head.isEmpty()) return 0
+
+        var longest = 0
+        var endsAt = 0
+        for (first in tail.indices) {
+            for (second in head.indices) {
+                var run = 0
+                while (first + run < tail.size &&
+                    second + run < head.size &&
+                    tail[first + run] == head[second + run]
+                ) {
+                    run++
                 }
-            if (alike) said = length
+                if (run > longest) {
+                    longest = run
+                    endsAt = second + run
+                }
+            }
         }
-        return said
+        return if (longest > 1 || longest == head.size) endsAt else 0
     }
 
     /**

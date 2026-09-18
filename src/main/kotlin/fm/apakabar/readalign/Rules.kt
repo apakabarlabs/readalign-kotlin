@@ -32,7 +32,6 @@ data class Rules(
     @SerialName("piece_seconds") val pieceSeconds: Double,
     @SerialName("shortest_piece_share") val shortestPieceShare: Double,
     @SerialName("pause_seconds") val pauseSeconds: Double,
-    @SerialName("same_moment") val sameMoment: Double,
     @SerialName("ask_again_trims") val askAgainTrims: List<Double>,
     @SerialName("shortest_worth_asking_again") val shortestWorthAskingAgain: Double,
 ) {

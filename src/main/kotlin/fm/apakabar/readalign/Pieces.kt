@@ -84,9 +84,15 @@ object Pieces {
      * One reading out of what each piece came back with.
      *
      * The pieces overlap, so the words at a seam arrive twice, and the second copy is
-     * dropped by time and text together: the same word marked within `same_moment` of one
-     * already kept is one word. Placed where it falls in the whole recording, so a caller
-     * hands over what it was given piece by piece and gets the reading back.
+     * dropped by the text: the longest run of words the piece before already said is taken
+     * off the front of the one coming. Placed where it falls in the whole recording, so a
+     * caller hands over what it was given piece by piece and gets the reading back.
+     *
+     * By the text and not by the clock, because the clock is the one thing two builds of one
+     * model do not share: the same word decoded in two pieces comes back a fifth of a second
+     * apart on one runtime and differently again on the next, so a rule that asks how close
+     * two marks are decides differently on each of them. The words agree where the marks do
+     * not.
      *
      * A piece the recogniser had nothing to say about is an answer, not a failure: a
      * stretch of silence is transcribed as no words at all. A count of transcripts that
@@ -100,19 +106,45 @@ object Pieces {
     ): List<RecognizedWord> {
         if (heard.size != pieces.size) throw UnevenPiecesException(heard.size, pieces.size)
         val reading = mutableListOf<RecognizedWord>()
+        var coveredTo = 0.0
         for ((words, piece) in heard.zip(pieces)) {
             val offset = piece.first / sampleRate
-            for (word in words) {
-                val placed =
+            val placed =
+                words.map { word ->
                     RecognizedWord(
                         text = word.text,
                         start = word.start + offset,
                         end = word.end + offset,
                     )
-                if (reading.none { sameWord(it, placed) }) reading.add(placed)
-            }
+                }
+            reading.addAll(placed.drop(saidAlready(reading, placed, coveredTo)))
+            coveredTo = (piece.last + 1) / sampleRate
         }
         return reading
+    }
+
+    /**
+     * How many of the coming piece's first words the piece before it has already said.
+     *
+     * Only the words that fall in the ground both pieces cover can be a second copy, so the
+     * search stops where the piece before ended: a word the reading genuinely says twice,
+     * further along, is out of reach of this and stays.
+     */
+    private fun saidAlready(
+        kept: List<RecognizedWord>,
+        coming: List<RecognizedWord>,
+        coveredTo: Double,
+    ): Int {
+        val reach = minOf(coming.takeWhile { it.start < coveredTo }.size, kept.size)
+        var said = 0
+        for (length in 1..reach) {
+            val alike =
+                kept.takeLast(length).zip(coming.take(length)).all { (earlier, later) ->
+                    normalize(earlier.text) == normalize(later.text)
+                }
+            if (alike) said = length
+        }
+        return said
     }
 
     /**
@@ -145,13 +177,6 @@ object Pieces {
         }
         return words
     }
-
-    private fun sameWord(
-        kept: RecognizedWord,
-        word: RecognizedWord,
-    ): Boolean =
-        kotlin.math.abs(kept.start - word.start) < Rules.shared.sameMoment &&
-            normalize(kept.text) == normalize(word.text)
 }
 
 class UnevenPiecesException(

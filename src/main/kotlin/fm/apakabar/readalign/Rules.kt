@@ -13,6 +13,7 @@ data class Rules(
     @SerialName("mismatch_penalty") val mismatchPenalty: Double,
     @SerialName("room_enough") val roomEnough: Double,
     @SerialName("join_span") val joinSpan: Int,
+    @SerialName("vouched_join_span") val vouchedJoinSpan: Int,
     @SerialName("english_vowels") val englishVowels: String,
     @SerialName("silent_ending") val silentEnding: String,
     @SerialName("silent_ending_except_after") val silentEndingExceptAfter: String,

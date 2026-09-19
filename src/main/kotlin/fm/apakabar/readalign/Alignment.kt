@@ -41,20 +41,26 @@ internal class Alignment(
         if (!joinable(parts) || expected[row].isEmpty()) return mismatchPenalty
         val joined = parts.joinToString("")
         if (equivalent?.invoke(expected[row], joined, before(row)) == true) return 1.0
+        if (span > spansForExpectedAt(row)) return Double.NEGATIVE_INFINITY
         return worth(similarity(expected[row], joined), joinThreshold)
     }
 
     fun spansForExpectedAt(row: Int): Int = max(Rules.shared.joinSpan, printedParts[row])
 
+    fun consideredSpansForExpectedAt(row: Int): IntRange = PAIR..max(spansForExpectedAt(row), Rules.shared.vouchedJoinSpan)
+
     fun joinedExpected(
         row: Int,
         column: Int,
+        span: Int,
     ): Double {
-        if (!joinable(expected.subList(row - 1, row + 1)) || heard[column].isEmpty()) return mismatchPenalty
-        val joined = expected[row - 1] + expected[row]
-        if (equivalent?.invoke(joined, heard[column], if (row > 1) expected[row - PAIR] else null) == true) {
+        val parts = expected.subList(row - span + 1, row + 1)
+        if (!joinable(parts) || heard[column].isEmpty()) return mismatchPenalty
+        val joined = parts.joinToString("")
+        if (equivalent?.invoke(joined, heard[column], if (row >= span) expected[row - span] else null) == true) {
             return 1.0
         }
+        if (span > PAIR) return Double.NEGATIVE_INFINITY
         return worth(similarity(joined, heard[column]), joinThreshold)
     }
 
@@ -85,13 +91,13 @@ internal class Alignment(
                 var best = score[row - 1][column - 1] + straight(row - 1, column - 1)
                 best = max(best, score[row - 1][column] + gapPenalty)
                 best = max(best, score[row][column - 1] + gapPenalty)
-                for (span in PAIR..spansForExpectedAt(row - 1)) {
+                for (span in consideredSpansForExpectedAt(row - 1)) {
                     if (column >= span) {
                         best = max(best, score[row - 1][column - span] + joinedHeard(row - 1, column - 1, span))
                     }
                 }
-                if (row >= PAIR) {
-                    best = max(best, score[row - PAIR][column - 1] + joinedExpected(row - 1, column - 1))
+                for (span in PAIR..minOf(row, Rules.shared.vouchedJoinSpan)) {
+                    best = max(best, score[row - span][column - 1] + joinedExpected(row - 1, column - 1, span))
                 }
                 if (row >= PAIR && column >= PAIR) {
                     best = max(best, score[row - PAIR][column - PAIR] + joinedPair(row - 1, column - 1))
@@ -113,9 +119,18 @@ internal class Alignment(
                 if (cell == score[row - 1][column - 1] + straight) {
                     null
                 } else {
-                    (PAIR..spansForExpectedAt(row - 1)).firstOrNull { span ->
+                    consideredSpansForExpectedAt(row - 1).firstOrNull { span ->
                         column >= span &&
                             cell == score[row - 1][column - span] + joinedHeard(row - 1, column - 1, span)
+                    }
+                }
+            val expectedSpan =
+                if (row < PAIR) {
+                    null
+                } else {
+                    (PAIR..minOf(row, Rules.shared.vouchedJoinSpan)).firstOrNull { candidate ->
+                        cell == score[row - candidate][column - 1] +
+                            joinedExpected(row - 1, column - 1, candidate)
                     }
                 }
             when {
@@ -142,11 +157,11 @@ internal class Alignment(
                     row -= PAIR
                     column -= PAIR
                 }
-                row >= PAIR && cell == score[row - PAIR][column - 1] + joinedExpected(row - 1, column - 1) -> {
-                    if (joinedExpected(row - 1, column - 1) >= joinThreshold) {
-                        matches.add(WordMatch(row - PAIR until row, column - 1 until column))
+                expectedSpan != null -> {
+                    if (joinedExpected(row - 1, column - 1, expectedSpan) >= joinThreshold) {
+                        matches.add(WordMatch(row - expectedSpan until row, column - 1 until column))
                     }
-                    row -= PAIR
+                    row -= expectedSpan
                     column -= 1
                 }
                 cell == score[row - 1][column] + gapPenalty -> row -= 1

@@ -70,8 +70,8 @@ val matches = TranscriptAligner.pair(
     threshold = 0.6,
 )
 
-// the pair whose boundary moved comes back as one match
-check(matches.any { it.expected == 1 until 3 && it.heard == 1 until 3 })
+val movedBoundary = matches.any { it.expected == 1 until 3 && it.heard == 1 until 3 }
+check(movedBoundary)
 ```
 
 ### Recogniser patches

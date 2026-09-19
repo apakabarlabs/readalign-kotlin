@@ -43,9 +43,6 @@ install:
 build: lint test-build test docs
 	./gradlew build
 
-# The numbers and the cases belong to the leading port and are copied here. Run this
-# when they change there; a test holds the copies against that repository's main, so a
-# copy left behind fails rather than quietly keeping this port on older behaviour.
 sync-yaml:
 	mkdir -p $(RESOURCES) $(TEST_RESOURCES)
 	cp $(SWIFT_DIR)/Sources/ReadAlign/Resources/rules.yaml $(RESOURCES)/

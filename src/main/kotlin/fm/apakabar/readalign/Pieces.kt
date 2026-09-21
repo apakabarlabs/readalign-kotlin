@@ -214,10 +214,18 @@ object Pieces {
         piece: FloatArray,
         sampleRate: Double,
         asking: (FloatArray) -> List<RecognizedWord>,
+    ): List<RecognizedWord> = heard(piece, sampleRate, 0.0, asking)
+
+    fun heard(
+        piece: FloatArray,
+        sampleRate: Double,
+        coveredPrefix: Double,
+        asking: (FloatArray) -> List<RecognizedWord>,
     ): List<RecognizedWord> {
         val words = asking(piece)
         if (words.isNotEmpty()) {
-            return recoveredTail(words, piece, sampleRate, asking)
+            val withHead = recoveredHead(words, piece, sampleRate, coveredPrefix, asking)
+            return recoveredTail(withHead, piece, sampleRate, asking)
         }
         if (piece.size / sampleRate < Rules.shared.shortestWorthAskingAgain) return words
 
@@ -225,9 +233,36 @@ object Pieces {
             val shorter = piece.size - (trim * sampleRate).toInt()
             if (shorter <= 0) break
             val again = asking(piece.copyOfRange(0, shorter))
-            if (again.isNotEmpty()) return again
+            if (again.isNotEmpty()) {
+                val withHead = recoveredHead(again, piece, sampleRate, coveredPrefix, asking)
+                return recoveredTail(withHead, piece, sampleRate, asking)
+            }
         }
         return words
+    }
+
+    private fun recoveredHead(
+        words: List<RecognizedWord>,
+        piece: FloatArray,
+        sampleRate: Double,
+        coveredPrefix: Double,
+        asking: (FloatArray) -> List<RecognizedWord>,
+    ): List<RecognizedWord> {
+        if (words.first().start - coveredPrefix < Rules.shared.uncoveredHeadSeconds) return words
+        val beforeFirst = piece.copyOfRange(0, (words.first().start * sampleRate).toInt())
+        val through = pauses(beforeFirst, sampleRate).lastOrNull() ?: return words
+        val head = piece.copyOfRange(0, through)
+        var recovered = asking(head)
+        if (recovered.isEmpty()) {
+            for (trim in Rules.shared.askAgainTrims) {
+                val shorter = head.size - (trim * sampleRate).toInt()
+                if (shorter <= 0) break
+                recovered = asking(head.copyOfRange(0, shorter))
+                if (recovered.isNotEmpty()) break
+            }
+        }
+        if (recovered.isEmpty()) return words
+        return recovered + words
     }
 
     private fun recoveredTail(

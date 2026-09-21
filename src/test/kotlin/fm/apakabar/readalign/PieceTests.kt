@@ -55,6 +55,7 @@ data class JoinRefusalCase(
 data class HeardCase(
     val name: String,
     @SerialName("sample_rate") val sampleRate: Double,
+    @SerialName("covered_prefix") val coveredPrefix: Double = 0.0,
     val waveform: List<Stretch>,
     val answers: List<List<HeardWord>>,
     @SerialName("asked_lengths") val askedLengths: List<Int>,
@@ -142,7 +143,11 @@ class PieceTests {
                 val asked = mutableListOf<Int>()
 
                 val words =
-                    Pieces.heard(heardCase.waveform.samples(heardCase.sampleRate), heardCase.sampleRate) { given ->
+                    Pieces.heard(
+                        heardCase.waveform.samples(heardCase.sampleRate),
+                        heardCase.sampleRate,
+                        heardCase.coveredPrefix,
+                    ) { given ->
                         asked.add(given.size)
                         answers.removeFirst()
                     }

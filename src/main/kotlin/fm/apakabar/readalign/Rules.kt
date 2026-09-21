@@ -36,6 +36,7 @@ data class Rules(
     @SerialName("edge_overlap") val edgeOverlap: Double,
     @SerialName("ask_again_trims") val askAgainTrims: List<Double>,
     @SerialName("shortest_worth_asking_again") val shortestWorthAskingAgain: Double,
+    @SerialName("uncovered_head_seconds") val uncoveredHeadSeconds: Double,
     @SerialName("partial_answer_overlap") val partialAnswerOverlap: Double,
 ) {
     /** Whether this mark writes one consonant joined to the next, making them one letter. */

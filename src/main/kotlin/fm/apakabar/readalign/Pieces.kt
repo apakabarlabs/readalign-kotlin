@@ -118,7 +118,6 @@ object Pieces {
                     )
                 }
             val seam = agreement(reading, placed, offset, coveredTo)
-            reading.addAll(seam.insertionAt, placed.take(seam.comingBeforeIt))
             repeat(seam.keptAfterIt) { reading.removeAt(reading.size - 1) }
             reading.addAll(placed.drop(seam.comingUpToIt))
             coveredTo = (piece.last + 1) / sampleRate
@@ -129,8 +128,6 @@ object Pieces {
     private data class Seam(
         val keptAfterIt: Int,
         val comingUpToIt: Int,
-        val insertionAt: Int = 0,
-        val comingBeforeIt: Int = 0,
     )
 
     private fun agreement(
@@ -139,14 +136,12 @@ object Pieces {
         overlapFrom: Double,
         coveredTo: Double,
     ): Seam {
-        val nothing = Seam(0, 0, kept.size)
+        val nothing = Seam(0, 0)
         val tail = kept.dropWhile { it.start < overlapFrom }.map { normalize(it.text) }
         val head = coming.takeWhile { it.start < coveredTo }.map { normalize(it.text) }
         if (tail.isEmpty() || head.isEmpty()) return nothing
 
         var longest = 0
-        var startsInTail = 0
-        var startsInHead = 0
         var endsInTail = 0
         var endsInHead = 0
         for (first in tail.indices) {
@@ -160,20 +155,13 @@ object Pieces {
                 }
                 if (run > longest) {
                     longest = run
-                    startsInTail = first
-                    startsInHead = second
                     endsInTail = first + run
                     endsInHead = second + run
                 }
             }
         }
         return if (longest > 1 || longest == head.size) {
-            Seam(
-                tail.size - endsInTail,
-                endsInHead,
-                kept.size - tail.size + startsInTail,
-                startsInHead,
-            )
+            Seam(tail.size - endsInTail, endsInHead)
         } else {
             nothing
         }

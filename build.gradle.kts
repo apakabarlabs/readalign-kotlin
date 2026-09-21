@@ -11,7 +11,7 @@ group = "fm.apakabar"
 version = "0.17.0"
 
 dependencies {
-    implementation("io.heapy.kotaml:kotaml:0.110.0")
+    implementation("io.heapy.kotaml:kotaml:0.111.0")
 
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")

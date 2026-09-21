@@ -118,6 +118,7 @@ object Pieces {
                     )
                 }
             val seam = agreement(reading, placed, offset, coveredTo)
+            reading.addAll(seam.insertionAt, placed.take(seam.comingBeforeIt))
             repeat(seam.keptAfterIt) { reading.removeAt(reading.size - 1) }
             reading.addAll(placed.drop(seam.comingUpToIt))
             coveredTo = (piece.last + 1) / sampleRate
@@ -128,6 +129,8 @@ object Pieces {
     private data class Seam(
         val keptAfterIt: Int,
         val comingUpToIt: Int,
+        val insertionAt: Int = 0,
+        val comingBeforeIt: Int = 0,
     )
 
     private fun agreement(
@@ -136,12 +139,14 @@ object Pieces {
         overlapFrom: Double,
         coveredTo: Double,
     ): Seam {
-        val nothing = Seam(0, 0)
+        val nothing = Seam(0, 0, kept.size)
         val tail = kept.dropWhile { it.start < overlapFrom }.map { normalize(it.text) }
         val head = coming.takeWhile { it.start < coveredTo }.map { normalize(it.text) }
         if (tail.isEmpty() || head.isEmpty()) return nothing
 
         var longest = 0
+        var startsInTail = 0
+        var startsInHead = 0
         var endsInTail = 0
         var endsInHead = 0
         for (first in tail.indices) {
@@ -155,12 +160,23 @@ object Pieces {
                 }
                 if (run > longest) {
                     longest = run
+                    startsInTail = first
+                    startsInHead = second
                     endsInTail = first + run
                     endsInHead = second + run
                 }
             }
         }
-        return if (longest > 1 || longest == head.size) Seam(tail.size - endsInTail, endsInHead) else nothing
+        return if (longest > 1 || longest == head.size) {
+            Seam(
+                tail.size - endsInTail,
+                endsInHead,
+                kept.size - tail.size + startsInTail,
+                startsInHead,
+            )
+        } else {
+            nothing
+        }
     }
 
     /**
@@ -187,7 +203,10 @@ object Pieces {
         asking: (FloatArray) -> List<RecognizedWord>,
     ): List<RecognizedWord> {
         val words = asking(piece)
-        if (words.isNotEmpty()) return recoveredTail(words, piece, sampleRate, asking)
+        if (words.isNotEmpty()) {
+            val withHead = recoveredHead(words, piece, sampleRate, asking)
+            return recoveredTail(withHead, piece, sampleRate, asking)
+        }
         if (piece.size / sampleRate < Rules.shared.shortestWorthAskingAgain) return words
 
         for (trim in Rules.shared.askAgainTrims) {
@@ -197,6 +216,44 @@ object Pieces {
             if (again.isNotEmpty()) return again
         }
         return words
+    }
+
+    private fun recoveredHead(
+        words: List<RecognizedWord>,
+        piece: FloatArray,
+        sampleRate: Double,
+        asking: (FloatArray) -> List<RecognizedWord>,
+    ): List<RecognizedWord> {
+        val frames = SilenceHold.energyFrames(piece, sampleRate)
+        val threshold = SilenceHold.speechThreshold(frames)
+        val lastFrame = minOf((words.first().start / Rules.shared.frameSeconds).toInt(), frames.size)
+        var heardSpeech = false
+        var wentQuiet = false
+        for (energy in frames.take(lastFrame)) {
+            if (energy >= threshold) {
+                heardSpeech = true
+            } else if (heardSpeech) {
+                wentQuiet = true
+            }
+        }
+        if (!wentQuiet) return words
+
+        val through =
+            minOf(
+                piece.size,
+                ((words.first().end + Rules.shared.partialAnswerOverlap) * sampleRate).toInt(),
+            )
+        val recovered = asking(piece.copyOfRange(0, through))
+        var seam = agreement(recovered, words, 0.0, through / sampleRate)
+        if (
+            seam.comingUpToIt == 0 &&
+            recovered.isNotEmpty() &&
+            normalize(recovered.last().text) == normalize(words.first().text)
+        ) {
+            seam = Seam(keptAfterIt = 0, comingUpToIt = 1)
+        }
+        if (seam.comingUpToIt == 0) return words
+        return recovered.dropLast(seam.keptAfterIt) + words.drop(seam.comingUpToIt)
     }
 
     private fun recoveredTail(

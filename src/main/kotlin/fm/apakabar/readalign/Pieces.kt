@@ -118,6 +118,9 @@ object Pieces {
                     )
                 }
             val seam = agreement(reading, placed, offset, coveredTo)
+            if (seam.insertionAt != null && seam.gapWord != null) {
+                reading.add(seam.insertionAt, seam.gapWord)
+            }
             repeat(seam.keptAfterIt) { reading.removeAt(reading.size - 1) }
             reading.addAll(placed.drop(seam.comingUpToIt))
             coveredTo = (piece.last + 1) / sampleRate
@@ -128,6 +131,8 @@ object Pieces {
     private data class Seam(
         val keptAfterIt: Int,
         val comingUpToIt: Int,
+        val insertionAt: Int? = null,
+        val gapWord: RecognizedWord? = null,
     )
 
     private fun agreement(
@@ -142,6 +147,8 @@ object Pieces {
         if (tail.isEmpty() || head.isEmpty()) return nothing
 
         var longest = 0
+        var startsInTail = 0
+        var startsInHead = 0
         var endsInTail = 0
         var endsInHead = 0
         for (first in tail.indices) {
@@ -155,13 +162,31 @@ object Pieces {
                 }
                 if (run > longest) {
                     longest = run
+                    startsInTail = first
+                    startsInHead = second
                     endsInTail = first + run
                     endsInHead = second + run
                 }
             }
         }
         return if (longest > 1 || longest == head.size) {
-            Seam(tail.size - endsInTail, endsInHead)
+            val agreementAt = kept.size - tail.size + startsInTail
+            val gapText = normalize(coming.first().text)
+            val previousText = if (agreementAt > 0) normalize(kept[agreementAt - 1].text) else ""
+            val hasOneWordInGap =
+                startsInHead == 1 &&
+                    agreementAt > 0 &&
+                    coming.first().start >= kept[agreementAt - 1].end &&
+                    (coming.first().start + coming.first().end) / 2 < kept[agreementAt].start &&
+                    gapText.isNotEmpty() &&
+                    !previousText.endsWith(gapText) &&
+                    !gapText.endsWith(previousText)
+            Seam(
+                tail.size - endsInTail,
+                endsInHead,
+                if (hasOneWordInGap) agreementAt else null,
+                if (hasOneWordInGap) coming.first() else null,
+            )
         } else {
             nothing
         }

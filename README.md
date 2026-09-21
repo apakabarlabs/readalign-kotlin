@@ -147,7 +147,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.apakabarlabs:readalign-kotlin:v0.13.1")
+    implementation("com.github.apakabarlabs:readalign-kotlin:v0.14.0")
 }
 ```
 

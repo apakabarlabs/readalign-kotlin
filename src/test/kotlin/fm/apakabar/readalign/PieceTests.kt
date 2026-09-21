@@ -52,11 +52,25 @@ data class JoinRefusalCase(
 }
 
 @Serializable
+data class HeardCase(
+    val name: String,
+    @SerialName("sample_rate") val sampleRate: Double,
+    val waveform: List<Stretch>,
+    val answers: List<List<HeardWord>>,
+    @SerialName("asked_lengths") val askedLengths: List<Int>,
+    val equals: List<HeardWord>,
+) {
+    val transcripts: List<List<RecognizedWord>> get() = answers.map { answer -> answer.map { it.recognized } }
+    val reading: List<RecognizedWord> get() = equals.map { it.recognized }
+}
+
+@Serializable
 data class PieceFile(
     val pauses: List<PauseCase>,
     val cuts: List<CutCase>,
     val joins: List<JoinCase>,
     @SerialName("join_refusals") val joinRefusals: List<JoinRefusalCase>,
+    val heard: List<HeardCase>,
 )
 
 /** Where a recording is cut into the pieces a recogniser is asked one at a time. */
@@ -117,6 +131,24 @@ class PieceTests {
                 assertFailsWith<UnevenPiecesException>(refusal.name) {
                     Pieces.joined(refusal.transcripts, refusal.ranges, refusal.sampleRate)
                 }
+            }
+        }
+
+    @TestFactory
+    fun recoversWhatTheCorpusSays(): List<DynamicTest> =
+        file.heard.map { heardCase ->
+            DynamicTest.dynamicTest(heardCase.name) {
+                val answers = heardCase.transcripts.toMutableList()
+                val asked = mutableListOf<Int>()
+
+                val words =
+                    Pieces.heard(heardCase.waveform.samples(heardCase.sampleRate), heardCase.sampleRate) { given ->
+                        asked.add(given.size)
+                        answers.removeFirst()
+                    }
+
+                assertEquals(heardCase.reading, words, heardCase.name)
+                assertEquals(heardCase.askedLengths, asked, "${heardCase.name}: asked $asked")
             }
         }
 

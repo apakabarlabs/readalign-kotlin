@@ -52,11 +52,9 @@ object Pieces {
      * enough for the runtime to take whole; where no pause falls there, it ends on length
      * alone, because a piece that grows to find a pause is the very window this avoids.
      * The next piece begins one pause earlier than the last ended, so every word is heard
-     * whole by at least one of them. Where no pause offers itself the two meet edge to edge
-     * and share nothing, which costs a word at that seam on a runtime that pads its input; a
-     * floor on the overlap was measured against that and cost more than it saved, because
-     * moving a piece changes the length of what the model is asked and this model answers a
-     * different length with different words.
+     * whole by at least one of them. Where that would leave no overlap, the next piece gets
+     * the standing `edgeOverlap`. A floor that moved every shorter overlap was measured
+     * worse.
      */
     fun cuts(
         samples: FloatArray,
@@ -70,9 +68,12 @@ object Pieces {
         val pieces = mutableListOf<IntRange>()
         var start = 0
         while (samples.size - start > longest) {
-            val cut = marks.lastOrNull { it > start + shortest && it < start + longest } ?: (start + longest)
+            val pause = marks.lastOrNull { it > start + shortest && it < start + longest }
+            val cut = pause ?: (start + longest)
             pieces.add(start until cut)
-            start = marks.lastOrNull { it < cut && it >= start + shortest } ?: cut
+            start =
+                marks.lastOrNull { it < cut && it >= start + shortest }
+                    ?: maxOf(start, cut - (Rules.shared.edgeOverlap * sampleRate).toInt())
         }
         pieces.add(start until samples.size)
         return pieces
@@ -163,7 +164,7 @@ object Pieces {
     }
 
     /**
-     * What one piece comes back as, asking again with less of its tail while nothing comes.
+     * What one piece comes back as, recovering an empty or prematurely stopped answer.
      *
      * Parakeet answers some pieces of ordinary speech with no words at all, and whether it
      * does turns on where the piece starts and how long it is together: the mel statistics
@@ -173,8 +174,12 @@ object Pieces {
      * silent pays for the whole list before answering nothing, which is why a piece shorter
      * than `shortest_worth_asking_again` is not asked again at all.
      *
-     * An answer won this way is missing whatever was said in the tail that was cut off. Each
-     * piece the recording is cut into overlaps the next, and that overlap is what covers it.
+     * A non-empty answer can also stop before speech resumes later in its audio. That tail
+     * is asked again with already recognised context and accepted only when the two answers
+     * share enough words to join without a duplicate.
+     *
+     * An empty answer won by trimming is missing whatever was said in the tail that was cut
+     * off. Each piece overlaps the next, and that overlap is what covers it.
      */
     fun heard(
         piece: FloatArray,
@@ -182,7 +187,8 @@ object Pieces {
         asking: (FloatArray) -> List<RecognizedWord>,
     ): List<RecognizedWord> {
         val words = asking(piece)
-        if (words.isNotEmpty() || piece.size / sampleRate < Rules.shared.shortestWorthAskingAgain) return words
+        if (words.isNotEmpty()) return recoveredTail(words, piece, sampleRate, asking)
+        if (piece.size / sampleRate < Rules.shared.shortestWorthAskingAgain) return words
 
         for (trim in Rules.shared.askAgainTrims) {
             val shorter = piece.size - (trim * sampleRate).toInt()
@@ -191,6 +197,46 @@ object Pieces {
             if (again.isNotEmpty()) return again
         }
         return words
+    }
+
+    private fun recoveredTail(
+        words: List<RecognizedWord>,
+        piece: FloatArray,
+        sampleRate: Double,
+        asking: (FloatArray) -> List<RecognizedWord>,
+    ): List<RecognizedWord> {
+        val frames = SilenceHold.energyFrames(piece, sampleRate)
+        val threshold = SilenceHold.speechThreshold(frames)
+        val firstFrame = (words.last().end / Rules.shared.frameSeconds).toInt()
+        var wentQuiet = false
+        var speechResumed = false
+        for (energy in frames.drop(firstFrame)) {
+            if (energy < threshold) {
+                wentQuiet = true
+            } else if (wentQuiet) {
+                speechResumed = true
+                break
+            }
+        }
+        if (!speechResumed) return words
+
+        val overlapFrom = maxOf(0.0, words.last().start - Rules.shared.partialAnswerOverlap)
+        val start = (overlapFrom * sampleRate).toInt()
+        val offset = start / sampleRate
+        val coming =
+            asking(piece.copyOfRange(start, piece.size)).map { word ->
+                RecognizedWord(word.text, word.start + offset, word.end + offset)
+            }
+        var seam = agreement(words, coming, offset, piece.size / sampleRate)
+        if (
+            seam.comingUpToIt == 0 &&
+            coming.isNotEmpty() &&
+            normalize(words.last().text) == normalize(coming.first().text)
+        ) {
+            seam = Seam(keptAfterIt = 0, comingUpToIt = 1)
+        }
+        if (seam.comingUpToIt == 0) return words
+        return words.dropLast(seam.keptAfterIt) + coming.drop(seam.comingUpToIt)
     }
 }
 

@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.17.1
+
+### Changed
+
+- Published to Maven Central as `fm.apakabar:readalign-kotlin`, signed, instead
+  of JitPack. The code is the same as 0.17.0.
+
+  Before:
+
+  ```kotlin
+  repositories { maven("https://jitpack.io") }
+  dependencies { implementation("com.github.apakabarlabs:readalign-kotlin:v0.17.0") }
+  ```
+
+  After:
+
+  ```kotlin
+  repositories { mavenCentral() }
+  dependencies { implementation("fm.apakabar:readalign-kotlin:0.17.1") }
+  ```
+
+  Drop the JitPack repository if nothing else comes from it.
+
 ## 0.17.0
 
 ### Fixed

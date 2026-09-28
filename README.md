@@ -139,15 +139,15 @@ check(spans[1].start == 1.0)
 
 ## Install
 
-Not on Maven Central yet, so a consumer takes it from the tag through [JitPack](https://jitpack.io):
+The library is published to Maven Central:
 
 ```kotlin
 repositories {
-    maven("https://jitpack.io")
+    mavenCentral()
 }
 
 dependencies {
-    implementation("com.github.apakabarlabs:readalign-kotlin:v0.17.0")
+    implementation("fm.apakabar:readalign-kotlin:0.17.1")
 }
 ```
 

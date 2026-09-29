@@ -7,7 +7,9 @@
 - The alignment rules ship at `fm/apakabar/readalign/rules.yaml` instead of the
   root of the jar, so an Android app that also depends on another library with a
   `rules.yaml` no longer fails to merge its resources. Nothing changes for code
-  that calls the library.
+  that calls the library. A build that worked around the clash with
+  `packaging { resources { excludes += "rules.yaml" } }` or `pickFirsts` drops that
+  line: with it, one of the libraries was left without its rules.
 
 ## 0.17.1
 

@@ -60,7 +60,7 @@ class CorpusCopyTests {
 
         private val SHARED =
             listOf(
-                "Sources/ReadAlign/Resources/rules.yaml" to "/rules.yaml",
+                "Sources/ReadAlign/Resources/rules.yaml" to "/fm/apakabar/readalign/rules.yaml",
                 "Tests/ReadAlignTests/Resources/align_tests.yaml" to "/align_tests.yaml",
                 "Tests/ReadAlignTests/Resources/fill_tests.yaml" to "/fill_tests.yaml",
                 "Tests/ReadAlignTests/Resources/hold_tests.yaml" to "/hold_tests.yaml",

@@ -56,7 +56,7 @@ data class Rules(
 
         val shared: Rules by lazy {
             val text =
-                checkNotNull(Rules::class.java.getResourceAsStream("/rules.yaml")) {
+                checkNotNull(Rules::class.java.getResourceAsStream("/fm/apakabar/readalign/rules.yaml")) {
                     "rules.yaml is missing from the library"
                 }.use { it.readBytes().decodeToString() }
             Yaml.default.decodeFromString(serializer(), text)

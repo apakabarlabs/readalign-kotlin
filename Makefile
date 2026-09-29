@@ -1,5 +1,6 @@
 SWIFT_DIR = ../readalign-swift
 RESOURCES = src/main/resources
+RULE_RESOURCES = $(RESOURCES)/fm/apakabar/readalign
 TEST_RESOURCES = src/test/resources
 COMMENTCENSOR_REF ?= 48d702a6ba4ace9af0bf996fad2fff9a012f25f9
 COMMENTCENSOR_ENV = build/commentcensor
@@ -55,5 +56,6 @@ publish-check:
 
 sync-yaml:
 	mkdir -p $(RESOURCES) $(TEST_RESOURCES)
-	cp $(SWIFT_DIR)/Sources/ReadAlign/Resources/rules.yaml $(RESOURCES)/
+	@mkdir -p $(RULE_RESOURCES)
+	cp $(SWIFT_DIR)/Sources/ReadAlign/Resources/rules.yaml $(RULE_RESOURCES)/
 	cp $(SWIFT_DIR)/Tests/ReadAlignTests/Resources/*.yaml $(TEST_RESOURCES)/

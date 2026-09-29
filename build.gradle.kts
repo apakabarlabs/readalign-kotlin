@@ -20,7 +20,7 @@ version =
     ) { "CHANGELOG.md has no released version heading" }.groupValues[1]
 
 dependencies {
-    implementation("io.heapy.kotaml:kotaml:0.110.0")
+    implementation("io.heapy.kotaml:kotaml:0.111.0")
 
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")

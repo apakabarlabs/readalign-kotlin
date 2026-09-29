@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.17.2
+
+### Fixed
+
+- The alignment rules ship at `fm/apakabar/readalign/rules.yaml` instead of the
+  root of the jar, so an Android app that also depends on another library with a
+  `rules.yaml` no longer fails to merge its resources. Nothing changes for code
+  that calls the library.
+
 ## 0.17.1
 
 ### Changed

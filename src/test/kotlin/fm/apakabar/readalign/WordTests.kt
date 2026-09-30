@@ -76,7 +76,7 @@ class WordTests {
     private val cases: Cases by lazy {
         val text =
             checkNotNull(this::class.java.getResourceAsStream("/word_tests.yaml")) {
-                "word_tests.yaml is missing: run `make sync-yaml`"
+                "word_tests.yaml is missing: run `make sync-yaml` in readalign-swift"
             }.use { it.readBytes().decodeToString() }
         Yaml.default.decodeFromString(Cases.serializer(), text)
     }

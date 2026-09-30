@@ -16,7 +16,7 @@ object Corpus {
     ): T {
         val text =
             checkNotNull(Corpus::class.java.getResourceAsStream("/$path")) {
-                "$path is missing: run `make sync-yaml`"
+                "$path is missing: run `make sync-yaml` in readalign-swift"
             }.use { it.readBytes().decodeToString() }
         return Yaml.default.decodeFromString(serializer, text)
     }

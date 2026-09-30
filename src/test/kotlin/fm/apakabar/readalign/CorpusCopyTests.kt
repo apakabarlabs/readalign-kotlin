@@ -36,7 +36,7 @@ class CorpusCopyTests {
 
     private fun copy(path: String): String =
         checkNotNull(CorpusCopyTests::class.java.getResourceAsStream(path)) {
-            "$path is missing: run `make sync-yaml`"
+            "$path is missing: run `make sync-yaml` in readalign-swift"
         }.use { it.readBytes().decodeToString() }
 
     @TestFactory
@@ -46,7 +46,7 @@ class CorpusCopyTests {
                 assertEquals(
                     fetch(there),
                     copy(here),
-                    "$here differs from the leading port: run `make sync-yaml`",
+                    "$here differs from the leading port: run `make sync-yaml` in readalign-swift",
                 )
             }
         }

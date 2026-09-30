@@ -1,11 +1,6 @@
-SWIFT_DIR = ../readalign-swift
-RESOURCES = src/main/resources
-RULE_RESOURCES = $(RESOURCES)/fm/apakabar/readalign
-TEST_RESOURCES = src/test/resources
-
 .DEFAULT_GOAL := build
 
-.PHONY: build test test-build docs comments lint lint-fix format clean install install-tools sync-yaml publish publish-local publish-check
+.PHONY: build test test-build docs comments lint lint-fix format clean install install-tools publish publish-local publish-check
 
 install-tools:
 	python3 -m pip install --quiet --upgrade git+https://github.com/botforge-pro/commentcensor.git
@@ -49,9 +44,3 @@ publish-local:
 
 publish-check:
 	./gradlew publishToMavenLocal
-
-sync-yaml:
-	mkdir -p $(RESOURCES) $(TEST_RESOURCES)
-	@mkdir -p $(RULE_RESOURCES)
-	cp $(SWIFT_DIR)/Sources/ReadAlign/Resources/rules.yaml $(RULE_RESOURCES)/
-	cp $(SWIFT_DIR)/Tests/ReadAlignTests/Resources/*.yaml $(TEST_RESOURCES)/

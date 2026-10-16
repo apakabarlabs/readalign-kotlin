@@ -86,6 +86,24 @@ class ReadmeTests {
     }
 
     @Test
+    fun `widened gives a word back the consonant before its mark`() {
+        val samples =
+            (
+                FloatArray(2000) { 0.001f } + FloatArray(500) { 0.003f } +
+                    FloatArray(1500) { 0.5f } + FloatArray(2000) { 0.001f }
+            )
+
+        val spans =
+            SilenceHold.widened(
+                listOf(WordSpan(0.25, 0.40)),
+                samples = samples,
+                sampleRate = 10000.0,
+            )
+
+        assertTrue(spans[0].start < 0.20)
+    }
+
+    @Test
     fun `another language brings its own weighting`() {
         val spans =
             TranscriptAligner.align(

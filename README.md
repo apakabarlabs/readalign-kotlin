@@ -93,7 +93,7 @@ check(matches.any { it.expected == 1 until 2 })
 
 ### Holding a word open through the silence after it
 
-The one part that needs the recording. A recogniser marks where a word stops being audible, not where the voice has finished with it, so a passage played to the mark stops a hair short of itself. Give it the samples and the marks come back carried to the quiet:
+A recogniser marks where a word stops being audible, not where the voice has finished with it, so a passage played to the mark stops a hair short of itself. Give it the samples and the marks come back carried to the quiet:
 
 ```kotlin
 import fm.apakabar.readalign.SilenceHold
@@ -110,6 +110,27 @@ val spans = SilenceHold.held(
 )
 
 check(spans[0].end > 0.10)
+```
+
+### Cutting one word out with the quiet around it
+
+A recogniser also marks a word from where it is sure of it, which is past the consonant the word opens with: the burst of a `c` or a `ch` is quieter than the voice and comes before the vowel. Cut at the marks, `crime` is heard as `prime`. `SilenceHold.widened` moves each start back through the quiet before the word and each end on through the quiet after it, stopping where the recording speaks again. Neither edge passes the middle of the gap to the neighbouring mark, the ends of the recording, or `hold_limit` from its own mark, and an edge with no quiet before any of those stays where it was.
+
+```kotlin
+import fm.apakabar.readalign.SilenceHold
+import fm.apakabar.readalign.WordSpan
+
+val samples =
+    (FloatArray(2000) { 0.001f } + FloatArray(500) { 0.003f } +
+        FloatArray(1500) { 0.5f } + FloatArray(2000) { 0.001f })
+
+val spans = SilenceHold.widened(
+    listOf(WordSpan(0.25, 0.40)),
+    samples = samples,
+    sampleRate = 10000.0,
+)
+
+check(spans[0].start < 0.20)
 ```
 
 ### Other languages

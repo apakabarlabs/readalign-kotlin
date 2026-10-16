@@ -60,7 +60,8 @@ object SilenceHold {
      * way. Neither passes the middle of the gap to the neighbouring mark, the ends of the
      * recording, or [limit] from its own mark. An edge that meets no quiet before one of
      * those stays where it was: with no pause between two words there is nothing to give
-     * either of them.
+     * either of them. So does an edge that would move by less than `least_widening`, each
+     * edge judged on its own and the distance counted in samples.
      */
     fun widened(
         spans: List<WordSpan>,
@@ -112,9 +113,12 @@ object SilenceHold {
                 frame += 1
             }
 
+            val least = (Rules.shared.leastWidening * sampleRate).roundToLong()
+            val startMoves = ((span.start - start) * sampleRate).roundToLong() >= least
+            val endMoves = ((end - span.end) * sampleRate).roundToLong() >= least
             WordSpan(
-                start = if (wentQuiet) min(start, span.start) else span.start,
-                end = if (endWentQuiet) max(end, span.end) else span.end,
+                start = if (wentQuiet && startMoves) start else span.start,
+                end = if (endWentQuiet && endMoves) end else span.end,
             )
         }
     }

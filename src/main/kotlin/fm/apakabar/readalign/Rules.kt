@@ -28,6 +28,7 @@ data class Rules(
     @SerialName("speech_above_room") val speechAboveRoom: Double,
     @SerialName("quietest_room") val quietestRoom: Double,
     @SerialName("hold_limit") val holdLimit: Double,
+    @SerialName("least_widening") val leastWidening: Double,
     @SerialName("speech_from_loudest_share") val speechFromLoudestShare: Double,
     @SerialName("quietest_speech") val quietestSpeech: Double,
     @SerialName("piece_seconds") val pieceSeconds: Double,

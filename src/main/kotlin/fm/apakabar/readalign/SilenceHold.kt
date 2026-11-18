@@ -2,6 +2,7 @@ package fm.apakabar.readalign
 
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import kotlin.math.sqrt
 
@@ -62,19 +63,26 @@ object SilenceHold {
      * those stays where it was: with no pause between two words there is nothing to give
      * either of them. So does an edge that would move by less than `least_widening`, each
      * edge judged on its own and the distance counted in samples.
+     *
+     * Two words marked edge to edge share that edge, and where it falls inside a sound it
+     * goes first to the middle of the nearest pause within [limit], as two words with a gap
+     * between their marks meet there: the recogniser marks a word from where it is sure of it, so the opening hiss
+     * of the next word sounds before its mark. It goes no further than the middle of
+     * either word, so a short word keeps the pause after it.
      */
     fun widened(
-        spans: List<WordSpan>,
+        marks: List<WordSpan>,
         samples: FloatArray,
         sampleRate: Double,
         limit: Double = Rules.shared.holdLimit,
     ): List<WordSpan> {
         val frames = energyFrames(samples, sampleRate)
-        if (frames.isEmpty()) return spans
+        if (frames.isEmpty()) return marks
         val threshold = speechThreshold(frames)
         val size = max((Rules.shared.frameSeconds * sampleRate).toInt(), 1)
         val eachFrame = size / sampleRate
         val duration = samples.size / sampleRate
+        val spans = settled(marks, frames, threshold, eachFrame, limit, sampleRate)
 
         return spans.indices.map { index ->
             val span = spans[index]
@@ -123,6 +131,60 @@ object SilenceHold {
         }
     }
 
+    private fun settled(
+        spans: List<WordSpan>,
+        frames: List<Double>,
+        threshold: Double,
+        eachFrame: Double,
+        limit: Double,
+        sampleRate: Double,
+    ): List<WordSpan> {
+        val pauses = quietRuns(frames, threshold, max((Rules.shared.pauseSeconds / eachFrame).roundToInt(), 1))
+        val settled = spans.toMutableList()
+        for (index in 0 until settled.size - 1) {
+            val word = settled[index]
+            val following = settled[index + 1]
+            if ((word.end * sampleRate).roundToLong() != (following.start * sampleRate).roundToLong()) continue
+            val seam = following.start
+            val frame = (seam / eachFrame).roundToInt()
+            if (frame <= 0 || frame >= frames.size) continue
+            if (frames[frame - 1] < threshold || frames[frame] < threshold) continue
+            val lowest = (word.start + seam) / 2
+            val highest = (following.start + following.end) / 2
+            val nearest =
+                pauses
+                    .mapNotNull { run ->
+                        val from = run.first * eachFrame
+                        val to = (run.last + 1) * eachFrame
+                        val distance = if (to <= seam) seam - to else from - seam
+                        val middle = (from + to) / 2
+                        if (distance <= limit && middle in lowest..highest) distance to middle else null
+                    }.minByOrNull { it.first } ?: continue
+            settled[index] = WordSpan(word.start, nearest.second)
+            settled[index + 1] = WordSpan(nearest.second, following.end)
+        }
+        return settled
+    }
+
+    private fun quietRuns(
+        frames: List<Double>,
+        threshold: Double,
+        atLeast: Int,
+    ): List<IntRange> {
+        val runs = mutableListOf<IntRange>()
+        var start: Int? = null
+        for (index in frames.indices) {
+            if (frames[index] < threshold) {
+                if (start == null) start = index
+            } else if (start != null) {
+                if (index - start >= atLeast) runs.add(start until index)
+                start = null
+            }
+        }
+        if (start != null && frames.size - start >= atLeast) runs.add(start until frames.size)
+        return runs
+    }
+
     /** How loud the recording is over each short stretch of it. */
     fun energyFrames(
         samples: FloatArray,
@@ -144,7 +206,11 @@ object SilenceHold {
     fun speechThreshold(frames: List<Double>): Double {
         if (frames.isEmpty()) return 0.0
         val room = frames.sorted()[(frames.size * Rules.shared.roomQuantile).toInt()]
-        return max(room * Rules.shared.speechAboveRoom, Rules.shared.quietestRoom)
+        return maxOf(
+            room * Rules.shared.speechAboveRoom,
+            Rules.shared.quietestRoom,
+            speechLevel(frames) * Rules.shared.quietBelowVoice,
+        )
     }
 
     /** How loud this recording speaks, as the mean of its loudest share. */

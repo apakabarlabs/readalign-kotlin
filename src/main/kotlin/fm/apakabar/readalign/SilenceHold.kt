@@ -147,9 +147,13 @@ object SilenceHold {
             val word = settled[index]
             val following = settled[index + 1]
             if ((word.end * sampleRate).roundToLong() > (following.start * sampleRate).roundToLong()) continue
+            val touching = (word.end * sampleRate).roundToLong() == (following.start * sampleRate).roundToLong()
             val loud =
-                listOf(following.start, word.end).filter { edge ->
-                    val frame = (edge / eachFrame).roundToInt()
+                listOf(
+                    EdgeInSound(following.start, looksBack = true, looksOn = touching),
+                    EdgeInSound(word.end, looksBack = touching, looksOn = true),
+                ).filter { edge ->
+                    val frame = (edge.time / eachFrame).roundToInt()
                     frame > 0 && frame < frames.size && frames[frame - 1] >= threshold && frames[frame] >= threshold
                 }
             if (loud.isEmpty()) continue
@@ -160,7 +164,15 @@ object SilenceHold {
                     .mapNotNull { run ->
                         val from = run.first * eachFrame
                         val to = (run.last + 1) * eachFrame
-                        val distance = loud.minOf { edge -> if (to <= edge) edge - to else from - edge }
+                        val distance =
+                            loud
+                                .mapNotNull { edge ->
+                                    when {
+                                        to <= edge.time -> if (edge.looksBack) edge.time - to else null
+                                        edge.looksOn -> from - edge.time
+                                        else -> null
+                                    }
+                                }.minOrNull() ?: Double.POSITIVE_INFINITY
                         val middle = (from + to) / 2
                         if (distance <= limit && middle in lowest..highest) distance to middle else null
                     }.minByOrNull { it.first } ?: continue
@@ -169,6 +181,12 @@ object SilenceHold {
         }
         return settled
     }
+
+    private data class EdgeInSound(
+        val time: Double,
+        val looksBack: Boolean,
+        val looksOn: Boolean,
+    )
 
     private fun quietRuns(
         frames: List<Double>,
